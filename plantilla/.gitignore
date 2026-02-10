@@ -32,3 +32,19 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Base de datos H2
+plantilla/iwdb*
+  
+# Datos de usuario
+plantilla/iwdata/
+
+# Credenciales
+plantilla/credentials.json
+
+# Maven
+plantilla/target/
+
+# Entornos virtuales
+plantilla/deploy/
+plantilla/venv/
