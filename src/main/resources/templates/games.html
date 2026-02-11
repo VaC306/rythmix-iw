@@ -2,9 +2,10 @@
 <html class="h-100" xmlns:th="http://www.thymeleaf.org">
 
 <head>
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <th:block th:replace="~{fragments/head :: header}" />
-    <title>Rythmix · Juegos</title>
+    <title th:text="#{games.pageTitle}"></title>
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -13,7 +14,7 @@
     <main class="flex-shrink-0">
         <div class="container my-5">
 
-            <h1 class="text-center mb-5">Lobby</h1>
+            <h1 class="text-center mb-5" th:text="#{games.title}"></h1>
 
             <!-- Modo 1 -->
             <a th:href="@{/lobby/gartic}" class="text-decoration-none">
@@ -21,11 +22,10 @@
                     <div class="card-body py-4">
                         <h2 class="card-title">
                             <i class="bi bi-dice-5 me-2"></i> 
-                            Canción sorpresa
+                            <span th:text="#{games.surpriseTitle}"></span>
                         </h2>
-                        <p class="card-text text-muted">
-                            Cada uno toca una parte y ya se verá que hay de resultado.
-                        </p>
+                        <p class="card-text text-muted"
+                           th:text="#{games.surpriseDesc}"></p>
                     </div>
                 </div>
             </a>
@@ -36,11 +36,10 @@
                     <div class="card-body py-4">
                         <h2 class="card-title">
                             <i class="bi bi-play-fill me-2"></i>
-                            Continuación de canción
+                            <span th:text="#{games.continueTitle}"></span>
                         </h2>
-                        <p class="card-text text-muted">
-                            Escucha el inicio e intenta continuar la letra o melodía.
-                        </p>
+                        <p class="card-text text-muted"
+                           th:text="#{games.continueDesc}"></p>
                     </div>
                 </div>
             </a>
