@@ -57,11 +57,6 @@ public class RootController {
     public String favoriteSongs() {
         return "favoriteSongs";
     }
-      
-    @GetMapping("/guess")
-    public String guess() {
-        return "guess";
-    }
 
     @GetMapping("/lobby/{mode}")
     public String lobby(@PathVariable String mode, Model model) {
