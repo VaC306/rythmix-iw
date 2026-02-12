@@ -2,9 +2,10 @@
 <html class="h-100" xmlns:th="http://www.thymeleaf.org">
 
 <head>
+    <meta charset="UTF-8" />
     <th:block th:replace="~{fragments/head :: header}" />
-    <title>Authors</title>
-    <!-- Optional: Add custom styles for author cards -->
+    <title th:text="#{authors.pageTitle}"></title>
+
     <style>
         .author-card {
             transition: transform 0.3s ease;
@@ -27,16 +28,17 @@
         <div class="container py-5">
             <!-- Page Header -->
             <div class="text-center mb-5">
-                <h1 class="display-4 fw-bold">Authors</h1>
+                <h1 class="display-4 fw-bold" th:text="#{authors.title}"></h1>
             </div>
 
             <!-- Author 1 -->
             <div class="card author-card shadow-sm mb-5 border-0">
                 <div class="row g-0">
                     <div class="col-md-4 d-flex align-items-center justify-content-center p-4">
-                        <img th:src="@{/img/TimofeyMatveev.jpeg}" 
-                             src="/img/TimofeyMatveev.jpeg" 
-                             alt="Imagen Aqui" 
+                        <img th:src="@{/img/TimofeyMatveev.jpeg}"
+                             src="/img/TimofeyMatveev.jpeg"
+                             th:alt="#{authors.imageAlt}"
+                             alt="Imagen Aqui"
                              class="author-img rounded-circle img-fluid">
                     </div>
                     <div class="col-md-8">
@@ -47,21 +49,24 @@
                                 </div>
                             </div>
                             <div class="social-links">
-                                <a href="https://github.com/TimotyEnder" class="me-3" target="_blank">
-                                 GitHub
+                                <a href="https://github.com/TimotyEnder" class="me-3" target="_blank"
+                                   th:text="#{authors.github}">
+                                    GitHub
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-             <!-- Author 1 -->
+
+            <!-- Author 2 -->
             <div class="card author-card shadow-sm mb-5 border-0">
                 <div class="row g-0">
                     <div class="col-md-4 d-flex align-items-center justify-content-center p-4">
-                        <img th:src="@{/img/RishiPursnaniMirpuri.jpg}" 
-                             src="/images/authors/author1.jpg" 
-                             alt="Imagen Aqui" 
+                        <img th:src="@{/img/RishiPursnaniMirpuri.jpg}"
+                             src="/images/authors/author1.jpg"
+                             th:alt="#{authors.imageAlt}"
+                             alt="Imagen Aqui"
                              class="author-img rounded-circle img-fluid">
                     </div>
                     <div class="col-md-8">
@@ -72,21 +77,24 @@
                                 </div>
                             </div>
                             <div class="social-links">
-                                <a href="https://github.com/VaC306" class="me-3" target="_blank">
-                                 GitHub
+                                <a href="https://github.com/VaC306" class="me-3" target="_blank"
+                                   th:text="#{authors.github}">
+                                    GitHub
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-             <!-- Author 1 -->
+
+            <!-- Author 3 -->
             <div class="card author-card shadow-sm mb-5 border-0">
                 <div class="row g-0">
                     <div class="col-md-4 d-flex align-items-center justify-content-center p-4">
-                        <img th:src="@{/img/VictorSanduStavita.jpg}" 
-                             src="/images/authors/author1.jpg" 
-                             alt="Imagen Aqui" 
+                        <img th:src="@{/img/VictorSanduStavita.jpg}"
+                             src="/images/authors/author1.jpg"
+                             th:alt="#{authors.imageAlt}"
+                             alt="Imagen Aqui"
                              class="author-img rounded-circle img-fluid">
                     </div>
                     <div class="col-md-8">
@@ -97,21 +105,24 @@
                                 </div>
                             </div>
                             <div class="social-links">
-                                <a href="https://github.com/VictorSS7" class="me-3" target="_blank">
-                                     GitHub
+                                <a href="https://github.com/VictorSS7" class="me-3" target="_blank"
+                                   th:text="#{authors.github}">
+                                    GitHub
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-             <!-- Author 1 -->
+
+            <!-- Author 4 -->
             <div class="card author-card shadow-sm mb-5 border-0">
                 <div class="row g-0">
                     <div class="col-md-4 d-flex align-items-center justify-content-center p-4">
-                        <img th:src="@{/img/AmauryValleLopez.jpg}" 
-                             src="/images/authors/author1.jpg" 
-                             alt="Imagen Aqui" 
+                        <img th:src="@{/img/AmauryValleLopez.jpg}"
+                             src="/images/authors/author1.jpg"
+                             th:alt="#{authors.imageAlt}"
+                             alt="Imagen Aqui"
                              class="author-img rounded-circle img-fluid">
                     </div>
                     <div class="col-md-8">
@@ -122,7 +133,8 @@
                                 </div>
                             </div>
                             <div class="social-links">
-                                <a href="https://github.com/amauryav-ucm" class="me-3" target="_blank">
+                                <a href="https://github.com/amauryav-ucm" class="me-3" target="_blank"
+                                   th:text="#{authors.github}">
                                     GitHub
                                 </a>
                             </div>
@@ -130,7 +142,10 @@
                     </div>
                 </div>
             </div>
+
+        </div>
     </main>
+
     <th:block th:replace="~{fragments/footer.html :: footer}" />
 </body>
 </html>
