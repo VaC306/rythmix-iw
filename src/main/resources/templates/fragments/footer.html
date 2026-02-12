@@ -9,7 +9,7 @@
     <!-- ver https://getbootstrap.com/docs/5.0/examples/sticky-footer-navbar/ -->
     <footer th:fragment="footer" class="footer mt-auto py-3 bg-light">
         <div class="container">
-            <a th:href="@{/about}">Sobre nosotros</a>
+            <a th:href="@{/about}" th:text="#{footer.about}"></a>
         </div>
         <!-- Bootstrap -->
         <script th:src="@{/js/bootstrap.bundle-5.3.3.js}" src="js/bootstrap.bundle-5.3.3.js"></script>
