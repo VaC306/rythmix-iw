@@ -4,6 +4,8 @@
 <head>
     <th:block th:replace="~{fragments/head :: header}" />
     <title>Rythmix · Continúa la canción</title>
+    <link rel="stylesheet" th:href="@{/css/abcjs-audio.css}" href="/css/components/pianoRoll.css">
+    <link rel="stylesheet" th:href="@{/css/components/pianoRoll.css}" href="/css/components/pianoRoll.css">
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -12,13 +14,43 @@
 <main class="flex-shrink-0">
     <div class="container my-5 text-center">
 
-        <h1 class="mb-4">▶️ Continúa la canción</h1>
+        <h1 class="mb-4">Continúa la canción</h1>
 
-        <p class="text-muted fs-5">
-            En esta página estará la pantalla de juego del juego de continúa la canción, contendrá una sección con la parte existente
-            de la cación, y una sección de edición donde el jugador puede componer su propuesta de continuación para la 
-            canción
-        </p>
+        <form>
+            <div class="row">
+                <label class="col-2 col-form-label" for="tempo">Tempo</label>
+                <div class="col-3">                    
+                    <input class="form-control" type="number" id="tempo">
+                </div>
+                <label class="col-2 col-form-label" for="inst">Instrumento</label>
+                <div class="col-3">                    
+                    <select id="inst" class="form-select">
+                        <option value="0">Piano de cola acústico</option>
+                        <option value="25">Guitarra acústica (acero)</option>
+                        <option value="33">Bajo eléctrico (finger)</option>
+                        <option value="48">Conjunto de cuerdas</option>
+                        <option value="56">Trompeta</option>
+                        <option value="73">Flauta</option>
+                        <option value="52">Coro (voces “aahs”)</option>
+                        <option value="81">Sintetizador lead (diente de sierra)</option>
+                        <option value="89">Pad de sintetizador (cálido)</option>
+                    </select>
+                </div>
+                <div class="col-2">
+                    <button type="button" id="btnForm" class="btn btn-primary float-end">OK</button>
+                </div>
+            </div>
+            
+            
+            
+        </form>
+        <div id="pianoRoll" class="h-scroll">
+
+        </div>
+
+        <div id="audio"></div>
+        <textarea id="abcTextRoll"></textarea>
+        <div id="paper"></div>
 
         <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample" aria-controls="offcanvasExample">
   Jugadores
@@ -53,5 +85,7 @@
         n+=1
     })
 </script>
+<script th:src="@{/js/abcjs-basic-min.js}" src="/js/abcjs-basic-min.js" ></script>
+<script th:src="@{/js/components/pianoRoll.js}" src="/js/components/pianoRoll.js" defer></script>
 
 </html>
