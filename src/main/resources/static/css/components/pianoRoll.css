@@ -56,10 +56,10 @@
   margin-top: 2em;
 }
 
-#abcTextRoll, #paper {
+/* #abcTextRoll, #paper {
   display: none;
 }
-
+ */
 .note-roll {
   display: flex;
 }
