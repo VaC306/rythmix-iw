@@ -4,6 +4,7 @@
 <head>
     <th:block th:replace="~{fragments/head :: header}" />
     <title>Rythmix · Continúa la canción</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/abcjs-audio.css}" href="/css/components/pianoRoll.css">
     <link rel="stylesheet" th:href="@{/css/components/pianoRoll.css}" href="/css/components/pianoRoll.css">
 </head>
@@ -48,9 +49,17 @@
 
         </div>
 
-        <div id="audio"></div>
-        <textarea id="abcTextRoll"></textarea>
-        <div id="paper"></div>
+        <button id="loop" type="button" class="btn btn-primary" title="Loop">
+            <i class="bi bi-arrow-repeat"></i>
+        </button>
+        <button id="play" type="button" class="btn btn-primary" title="Play">
+            <i class="bi bi-play-fill"></i>
+        </button>
+        <button id="stop" type="button" class="btn btn-primary" title="Stop">
+            <i class="bi bi-stop-fill"></i>
+        </button>
+
+        
 
         <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasExample" aria-controls="offcanvasExample">
   Jugadores
@@ -85,7 +94,7 @@
         n+=1
     })
 </script>
-<script th:src="@{/js/abcjs-basic-min.js}" src="/js/abcjs-basic-min.js" ></script>
+<script th:src="@{/js/abcjs-basic.js}" src="/js/abcjs-basic-min.js" ></script>
 <script th:src="@{/js/components/pianoRoll.js}" src="/js/components/pianoRoll.js" defer></script>
 
 </html>
