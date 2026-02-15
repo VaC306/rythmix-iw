@@ -23,6 +23,56 @@
                 topics: "[[${topics}?:'']]",
             };
             config.admin = config.admin == "true"; // ensure boolean
+            
+            // Add theme toggle JavaScript here
+            (function() {
+                // Theme management
+                const themeManager = {
+                    init() {
+                        this.themeToggle = document.getElementById('themeToggle');
+                        this.themeIcon = document.getElementById('themeIcon');
+                        this.themeText = document.getElementById('themeText');
+                        
+                        if (!this.themeToggle) return; // Exit if toggle doesn't exist
+                        
+                        // Check for saved theme preference
+                        const savedTheme = localStorage.getItem('theme') || 'light';
+                        this.setTheme(savedTheme);
+                        
+                        // Add event listener
+                        this.themeToggle.addEventListener('click', () => this.toggleTheme());
+                    },
+                    
+                    setTheme(theme) {
+                        document.documentElement.setAttribute('data-theme', theme);
+                        localStorage.setItem('theme', theme);
+                        
+                        // Update button text/icon
+                        if (this.themeIcon && this.themeText) {
+                            if (theme === 'dark') {
+                                this.themeIcon.textContent = '☀️';
+                                this.themeText.textContent = 'Light';
+                            } else {
+                                this.themeIcon.textContent = '🌙';
+                                this.themeText.textContent = 'Dark';
+                            }
+                        }
+                    },
+                    
+                    toggleTheme() {
+                        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                        this.setTheme(newTheme);
+                    }
+                };
+
+                // Initialize when DOM is ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => themeManager.init());
+                } else {
+                    themeManager.init();
+                }
+            })();
         </script>
     </th:block>
 </head>

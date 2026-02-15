@@ -25,3 +25,179 @@ img.preview {
     height: 100px;
     border-radius: 10px;
 }
+/*Authors page*/
+.author-card {
+    transition: transform 0.3s ease;
+}
+.author-img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+}
+.author-bio {
+    text-align: justify;
+}
+.card-title {
+    color: var(--text-color) !important;
+    transition: color 0.3s ease;
+}
+
+.social-links a {
+    color: var(--link-color) !important;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.social-links a:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+
+h1, h2, h3, h4, h5, h6, .display-4 {
+    color: var(--text-color) !important;
+    transition: color 0.3s ease;
+}
+
+
+.card-body {
+    color: var(--text-color);
+    background-color: var(--card-bg);
+}
+
+
+.text-muted, .text-secondary {
+    color: var(--text-color) !important;
+    opacity: 0.7;
+}
+
+/* Theme variables */
+:root {
+    --bg-color: #ffffff;
+    --text-color: #212529;
+    --navbar-bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --border-color: #dee2e6;
+    --link-color: #0d6efd;
+    --btn-outline-secondary-color: #6c757d;
+    --btn-outline-secondary-border: #6c757d;
+}
+
+[data-theme="dark"] {
+    --bg-color: #1a1a1a;
+    --text-color: #f8f9fa;
+    --navbar-bg: #2d2d2d;
+    --card-bg: #2d2d2d;
+    --border-color: #404040;
+    --link-color: #6ea8fe;
+    --btn-outline-secondary-color: #adb5bd;
+    --btn-outline-secondary-border: #495057;
+}
+
+/* Apply theme variables */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.navbar, .navbar.bg-light {
+    background-color: var(--navbar-bg) !important;
+}
+
+.navbar-light .navbar-nav .nav-link {
+    color: var(--text-color);
+}
+
+.navbar-light .navbar-brand {
+    color: var(--text-color);
+}
+
+
+.card {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    transition: background-color 0.3s ease, 
+                border-color 0.3s ease, 
+                color 0.3s ease;
+}
+
+a {
+    color: var(--link-color);
+}
+
+.btn-outline-secondary {
+    color: var(--btn-outline-secondary-color);
+    border-color: var(--btn-outline-secondary-border);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--btn-outline-secondary-border);
+    color: var(--bg-color);
+}
+
+/* Theme toggle button styling */
+.theme-toggle-container {
+    display: inline-block;
+}
+
+#themeToggle {
+    min-width: 80px;
+    border-radius: 20px;
+    padding: 0.25rem 1rem;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] #themeToggle {
+    background-color: var(--navbar-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+#themeToggle:hover {
+    transform: scale(1.05);
+}
+
+/* Smooth transitions for all themed elements */
+body, .navbar, .card, a, button, .nav-link, .navbar-brand {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease;
+}
+/* Footer styling */
+.footer {
+    background-color: var(--navbar-bg) !important;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.footer .container {
+    color: var(--text-color);
+}
+
+.footer a {
+    color: var(--link-color) !important;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+/* If you have any text in the footer besides the link */
+.footer p, .footer span, .footer div {
+    color: var(--text-color);
+}
+
+/* Make sure the footer link uses the same theme colors */
+.footer a:visited {
+    color: var(--link-color);
+}
+
+/* Update your transition list to include footer */
+body, .navbar, .card, a, button, .nav-link, .navbar-brand, .footer {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease;
+}
