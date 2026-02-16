@@ -80,6 +80,13 @@
                         </a>
                     </li>
 
+                    <li class="nav-item mx-2" th:if="${u != null and u.hasRole('ADMIN')}">
+                        <a class="nav-link"
+                           th:href="@{/admin/dashboard}"
+                           th:text="#{nav.dashboard}">
+                        </a>
+                    </li>
+
                 </ul>
 
                 <!-- Right menu -->
