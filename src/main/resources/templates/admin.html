@@ -27,7 +27,7 @@
                         <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tabla-usuarios">
                     <tr th:each="user : ${users}">
                         <td th:text="${user.id}">1</td>
                         <td th:text="${user.username}">paco</td>
@@ -53,6 +53,7 @@
                     </tr>
                 </tbody>
             </table>
+            <button type="button" id="truco" class="btn btn-danger">Hacer demo trucada</button>
         </div>
 
         <div class="container">
@@ -115,6 +116,37 @@
         }
         document.getElementById('refresh').addEventListener('click', refreshMessages);
         refreshMessages();
+
+
+        const otroUsuario = `
+        <tr>
+            <td>2</td>
+            <td>b</td>
+            <td>null null</td>
+            <td>
+                <ul>
+                    <li>USER</li>
+                </ul>
+            </td>
+            <td>
+                <ul>
+                    <li>[]</li>
+                </ul>
+            </td>
+            <td>
+                <form action="/admin/toggle/2" method="post"><input type="hidden" name="_csrf" value="JjsRZNRTysCGFQE0Mdye-1UGmuMF_60cX7q4bvvVcB-hB6HOFQohVuFk__GrJjkNVPGqyjBjt9o1npoxaIvaW8ngQS-QZJj3"/>
+                    <button type="submit"
+                        class="toggle btn btn-danger">Deshabilitar</button>
+                    
+                </form>
+            </td>
+        </tr>`;
+        
+        document.querySelector('#truco').addEventListener('click', () => {
+            const tbody = document.querySelector("#tabla-usuarios");
+            tbody.insertAdjacentHTML('beforeend', otroUsuario);
+        });
+
     </script>
 </body>
 
