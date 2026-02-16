@@ -324,4 +324,32 @@ public class UserController {
     messagingTemplate.convertAndSend("/user/" + u.getUsername() + "/queue/updates", json);
     return "{\"result\": \"message sent.\"}";
   }
+
+
+  @GetMapping("/contact")
+  public String contact(Model model, HttpSession session) {
+    User u = (User) session.getAttribute("u");
+    model.addAttribute("u",u);
+
+    return "contact";
+  }
+  
+
+  @PostMapping("/contact")
+  @Transactional
+  public String sendMessage(@RequestParam String message, Model model, HttpSession session) {
+    User u = (User) session.getAttribute("u");
+    
+    Message m = new Message();
+    m.setSender(u);
+    m.setText(message);
+    m.setDateSent(LocalDateTime.now());    
+    entityManager.persist(m);
+
+    model.addAttribute("message", "El mensaje ha sido enviado correctamente");
+    model.addAttribute("u", u);
+    
+    return "contact";
+  }
+  
 }
