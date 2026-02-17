@@ -45,7 +45,15 @@
 
 .black-key {
   height: var(--black-key-h);
-  background-color: #aaa;
+  background-color: rgb(170, 170, 170);
+}
+
+.white-key:hover:not(.active) {
+  background-color: rgb(170, 102, 170);
+}
+
+.black-key:hover:not(.active) {
+  background-color: rgb(136, 85, 136);
 }
 
 
