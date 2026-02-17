@@ -2,8 +2,9 @@
 <html class="h-100" xmlns:th="http://www.thymeleaf.org">
 
 <head>
+    <meta charset="UTF-8" />
     <th:block th:replace="~{fragments/head :: header}" />
-    <title>Rythmix · Adivina la canción</title>
+    <title th:text="#{favorites.pageTitle}"></title>
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -13,7 +14,7 @@
         <div class="container my-5">
 
             <!-- Título la vista -->
-            <h1 class="text-center mb-4">Mis canciones favoritas</h1>
+            <h1 class="text-center mb-4" th:text="#{favorites.title}"></h1>
 
             <!-- Lista de las canciones favoritas -->
             <div class="card mb-2 shadow-sm">
@@ -21,18 +22,12 @@
                     <div class="row align-items-center">
                         <div class="col"></div>
                         <div class="col text-center">
-                            <strong>Canción 1</strong>
+                            <strong th:text="#{favorites.song1}"></strong>
                         </div>
                         <div class="col d-flex justify-content-end gap-2">
-                            <button class="btn btn-outline-info">
-                                Ir hacia atrás
-                            </button>
-                            <button class="btn btn-primary">
-                                Reproducir
-                            </button>
-                            <button class="btn btn-outline-info">
-                                Ir hacia adelante
-                            </button>
+                            <button class="btn btn-outline-info" th:text="#{favorites.prev}"></button>
+                            <button class="btn btn-primary" th:text="#{favorites.play}"></button>
+                            <button class="btn btn-outline-info" th:text="#{favorites.next}"></button>
                         </div>
                     </div>
                 </div>
@@ -43,18 +38,12 @@
                     <div class="row align-items-center">
                         <div class="col"></div>
                         <div class="col text-center">
-                            <strong>Canción 2</strong>
+                            <strong th:text="#{favorites.song2}"></strong>
                         </div>
                         <div class="col d-flex justify-content-end gap-2">
-                            <button class="btn btn-outline-info">
-                                Ir hacia atrás
-                            </button>
-                            <button class="btn btn-primary">
-                                Reproducir
-                            </button>
-                            <button class="btn btn-outline-info">
-                                Ir hacia adelante
-                            </button>
+                            <button class="btn btn-outline-info" th:text="#{favorites.prev}"></button>
+                            <button class="btn btn-primary" th:text="#{favorites.play}"></button>
+                            <button class="btn btn-outline-info" th:text="#{favorites.next}"></button>
                         </div>
                     </div>
                 </div>
@@ -65,18 +54,12 @@
                     <div class="row align-items-center">
                         <div class="col"></div>
                         <div class="col text-center">
-                            <strong>Canción 3</strong>
+                            <strong th:text="#{favorites.song3}"></strong>
                         </div>
                         <div class="col d-flex justify-content-end gap-2">
-                            <button class="btn btn-outline-info">
-                                Ir hacia atrás
-                            </button>
-                            <button class="btn btn-primary">
-                                Reproducir
-                            </button>
-                            <button class="btn btn-outline-info">
-                                Ir hacia adelante
-                            </button>
+                            <button class="btn btn-outline-info" th:text="#{favorites.prev}"></button>
+                            <button class="btn btn-primary" th:text="#{favorites.play}"></button>
+                            <button class="btn btn-outline-info" th:text="#{favorites.next}"></button>
                         </div>
                     </div>
                 </div>
@@ -86,7 +69,7 @@
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col text-center">
-                            <strong>. . .</strong>
+                            <strong th:text="#{favorites.more}"></strong>
                         </div>
                     </div>
                 </div>

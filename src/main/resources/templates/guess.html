@@ -1,90 +1,250 @@
 <!DOCTYPE html>
 <html class="h-100" xmlns:th="http://www.thymeleaf.org">
-
-<head>
+  <head>
+    <meta charset="UTF-8" />
     <th:block th:replace="~{fragments/head :: header}" />
-    <title>Rythmix · Adivina la canción</title>
-</head>
+    <title th:text="#{guess.pageTitle}"></title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
+  </head>
 
-<body class="d-flex flex-column h-100">
+  <body class="d-flex flex-column h-100">
     <header th:replace="~{fragments/nav.html :: nav}"></header>
 
     <main class="flex-shrink-0">
-        <div class="container my-5">
+      <div class="container my-5">
+        <h1 class="text-center mb-4" th:text="#{guess.title}"></h1>
 
-            <h1 class="text-center mb-4">Adivina la canción</h1>
-
-            <div class="card mb-4 shadow-sm">
-                <div class="card-body">
-                    <h2 class="card-title fs-3">Información de la canción</h2>
-                    <p class="card-text text-center">
-                        Por ejemplo: artista, duración, género o año de publicación
-                    </p>
-                </div>
-            </div>
-
-            <div class="card mb-3 shadow-sm">
-                <div class="card-body">
-
-                    <h2 class="mb-2 text-center fs-5">
-                        Se mostrarán una serie de instrumentos a tocar de la canción
-                    </h2>
-
-                    <div class="row mb-2 text-center">
-                        <div class="col">
-                            <strong>Instrumento 1</strong>
-                        </div>
-                    </div>
-
-                    <div class="row mb-2 text-center">
-                        <div class="col">
-                            <strong >Instrumento 2</strong>
-                        </div>
-                    </div>
-
-                    <div class="row mb-2 text-center">
-                        <div class="col">
-                            <strong>Instrumento 3</strong>
-                        </div>
-                    </div>
-
-                    <div class="row text-center">
-                        <div class="col">
-                            <strong>. . .</strong>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-center gap-5 mb-3">
-                <button type="button" class="btn btn-outline-info ">
-                    Ir hacia atrás
-                </button>
-
-                <button type="button" class="btn btn-primary">
-                    Reproducir canción
-                </button>
-
-                <button type="button" class="btn btn-outline-info">
-                    Ir hacia adelante
-                </button>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h2 class="card-title mb-3 fs-3">Selecciona la canción</h2>
-
-                    <div class="text-center">
-                        <p> Aqui irá un buscador de las posibles canciones a seleccionar para adivinar la canción actual</p>
-                    </div>
-                </div>
-            </div>
-
+        <!-- Feedback -->
+        <div
+          th:if="${msg}"
+          class="alert alert-info text-center d-flex justify-content-center align-items-center gap-2"
+        >
+          <i class="bi bi-info-circle-fill"></i>
+          <span th:text="${msg}"></span>
         </div>
+
+        <!-- Info canción (sin revelar título) -->
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h2 class="card-title fs-3" th:text="#{guess.info}"></h2>
+
+            <p class="card-text text-center">
+              <span th:text="#{guess.year}"></span>:
+              <strong th:text="${song.year}"></strong>
+              <span th:text="#{guess.dotSeparator}"></span>
+              <span th:text="#{guess.genre}"></span>:
+              <strong th:text="${song.genre}"></strong>
+            </p>
+
+            <p class="text-muted text-center mb-0">
+              <span th:text="#{guess.layers}"></span>:
+              <strong th:text="${layerIndex + 1}"></strong>/<strong
+                th:text="${maxLayer + 1}"
+              ></strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- Player -->
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <div class="text-center mb-3">
+              <h2 class="mb-2 fs-5" th:text="#{guess.currentLayer}"></h2>
+
+              <span
+                class="badge bg-secondary fs-6 d-inline-flex align-items-center gap-2"
+              >
+                <th:block th:switch="${layerIndex}">
+                  <i th:case="0" class="bi bi-disc"></i>
+                  <i th:case="1" class="bi bi-speaker"></i>
+                  <i th:case="2" class="bi bi-sliders"></i>
+                  <i th:case="*" class="bi bi-mic-fill"></i>
+                </th:block>
+
+                <span th:text="${currentLayer.name}"></span>
+              </span>
+            </div>
+
+            <audio
+              id="player"
+              preload="metadata"
+              th:src="@{${currentLayer.audioUrl}}"
+            ></audio>
+
+            <!-- Barra progreso -->
+            <div class="px-2">
+              <input
+                id="seek"
+                type="range"
+                class="form-range"
+                min="0"
+                max="100"
+                value="0"
+                step="0.1"
+              />
+              <div class="d-flex justify-content-between text-muted small">
+                <span id="tCurrent">0:00</span>
+                <span id="tTotal">0:00</span>
+              </div>
+            </div>
+
+            <!-- Controles -->
+            <div
+              class="d-flex justify-content-center align-items-center gap-3 mt-3 flex-wrap"
+            >
+              <button
+                id="btnPlay"
+                type="button"
+                class="btn btn-primary px-5 d-inline-flex align-items-center gap-2"
+              >
+                <i id="playIcon" class="bi bi-play-fill"></i>
+                <span id="playText" th:text="#{guess.play}"></span>
+              </button>
+
+              <form th:action="@{/guess/nav}" method="post" class="m-0">
+                <input type="hidden" name="dir" value="next" />
+                <button
+                  type="submit"
+                  class="btn btn-outline-info px-4 d-inline-flex align-items-center gap-2"
+                  th:disabled="${layerIndex == maxLayer}"
+                >
+                  <span th:text="#{guess.next}"></span>
+                  <i class="bi bi-skip-forward-fill"></i>
+                </button>
+              </form>
+            </div>
+
+            <span class="d-inline-flex align-items-center gap-2">
+              <i class="bi bi-lightning-charge-fill"></i>
+              <span th:text="#{guess.tip}"></span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Adivinar -->
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="card-title mb-3 fs-3" th:text="#{guess.title}"></h2>
+
+            <form
+              th:action="@{/guess/submit}"
+              method="post"
+              class="row g-2 justify-content-center"
+            >
+              <div class="col-12 col-md-6">
+                <select class="form-select" name="answer" required>
+                  <option
+                    value=""
+                    disabled
+                    selected
+                    th:text="#{guess.selectPlaceholder}"
+                  ></option>
+
+                  <option
+                    th:each="s : ${songList}"
+                    th:value="${s.id}"
+                    th:text="${s.title + ' – ' + s.artist}"
+                  ></option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-auto">
+                <button
+                  class="btn btn-success"
+                  type="submit"
+                  th:text="#{guess.submit}"
+                ></button>
+              </div>
+            </form>
+
+            <p
+              class="text-muted text-center mt-3 mb-0"
+              th:text="#{guess.demoNote}"
+            ></p>
+          </div>
+        </div>
+      </div>
     </main>
 
     <th:block th:replace="~{fragments/footer.html :: footer}" />
-</body>
 
+    <script>
+      (() => {
+        const audio = document.getElementById("player");
+        const btnPlay = document.getElementById("btnPlay");
+        const seek = document.getElementById("seek");
+        const tCurrent = document.getElementById("tCurrent");
+        const tTotal = document.getElementById("tTotal");
+
+        const playIcon = document.getElementById("playIcon");
+        const playText = document.getElementById("playText");
+
+        const fmt = (sec) => {
+          if (!isFinite(sec) || sec < 0) return "0:00";
+          const m = Math.floor(sec / 60);
+          const s = Math.floor(sec % 60);
+          return `${m}:${String(s).padStart(2, "0")}`;
+        };
+
+        // Nota: aquí no usamos i18n directo en JS; el texto inicial ya viene del HTML.
+        const setPlayLabel = (playing) => {
+          if (playing) {
+            playIcon.className = "bi bi-pause-fill";
+            playText.textContent = "Pausar";
+          } else {
+            playIcon.className = "bi bi-play-fill";
+            playText.textContent = "Reproducir";
+          }
+        };
+
+        audio.addEventListener("loadedmetadata", () => {
+          tTotal.textContent = fmt(audio.duration);
+          seek.value = 0;
+          tCurrent.textContent = "0:00";
+          setPlayLabel(false);
+        });
+
+        audio.addEventListener("error", () => {
+          console.error("Audio error:", audio.error);
+          setPlayLabel(false);
+        });
+
+        btnPlay.addEventListener("click", async () => {
+          try {
+            if (audio.paused) {
+              await audio.play();
+              setPlayLabel(true);
+            } else {
+              audio.pause();
+              setPlayLabel(false);
+            }
+          } catch (e) {
+            console.error("No se pudo reproducir:", e);
+          }
+        });
+
+        audio.addEventListener("timeupdate", () => {
+          if (!isFinite(audio.duration) || audio.duration <= 0) return;
+          const pct = (audio.currentTime / audio.duration) * 100;
+          seek.value = String(pct);
+          tCurrent.textContent = fmt(audio.currentTime);
+        });
+
+        audio.addEventListener("ended", () => {
+          setPlayLabel(false);
+          seek.value = 0;
+          tCurrent.textContent = "0:00";
+        });
+
+        seek.addEventListener("input", () => {
+          if (!isFinite(audio.duration) || audio.duration <= 0) return;
+          const pct = Number(seek.value) / 100;
+          audio.currentTime = pct * audio.duration;
+        });
+      })();
+    </script>
+  </body>
 </html>
