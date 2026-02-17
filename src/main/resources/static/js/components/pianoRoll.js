@@ -1,11 +1,256 @@
 let audioCtx = new AudioContext();
 let seq,
-    trackNumber,
+    dynamicTrackNumber,
+    staticTrackNumber,
     synth,
     loop = false;
 let bpm = 140;
 let inst = 1;
 let beats = 32;
+
+const staticTrack = [
+    {
+        "pitch": 35,
+        "start": 0,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.125,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 0.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.375,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 0.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.625,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 0.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 0.875,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 1,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.125,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 1.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.375,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 1.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.625,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 1.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 1.875,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 2,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.125,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 2.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.375,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 2.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.625,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 2.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 2.875,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 3,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.125,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 3.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.25,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.375,
+        "instrument": 128
+    },
+    {
+        "pitch": 35,
+        "start": 3.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.5,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.625,
+        "instrument": 128
+    },
+    {
+        "pitch": 38,
+        "start": 3.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.75,
+        "instrument": 128
+    },
+    {
+        "pitch": 42,
+        "start": 3.875,
+        "instrument": 128
+    }
+]
+
 const notes = [
     // Octave 3
     { pitch: 48, note: "C", octave: 3, isBlack: false },
@@ -60,6 +305,7 @@ async function buildPianoRoll(notes) {
         roll.classList.add("note-roll");
         for (let i = 0; i < beats; i++) {
             cb = document.createElement("div");
+            cb.setAttribute("title", n.note);
             if (i == 0 && n.note === "C")
                 cb.insertAdjacentHTML(
                     "beforeend",
@@ -85,10 +331,20 @@ async function addNoteListeners() {
             key.classList.toggle("active");
             if (key.classList.contains("active")) {
                 timeline[key.dataset.time].add(key.dataset.pitch);
-                addNote(key.dataset.pitch, key.dataset.time);
+                addNote(
+                    key.dataset.pitch,
+                    (4 * parseInt(key.dataset.time)) / beats,
+                    dynamicTrackNumber,
+                    seq.currentInstrument[dynamicTrackNumber],
+                );
             } else {
                 timeline[key.dataset.time].delete(key.dataset.pitch);
-                removeNote(key.dataset.pitch, key.dataset.time);
+                removeNote(
+                    key.dataset.pitch,
+                    (4 * parseInt(key.dataset.time)) / beats,
+                    dynamicTrackNumber,
+                    seq.currentInstrument[dynamicTrackNumber],
+                );
             }
         });
     });
@@ -96,8 +352,8 @@ async function addNoteListeners() {
 
 async function createSequence() {
     seq = new ABCJS.synth.SynthSequence();
-    trackNumber = seq.addTrack();
-    seq.setInstrument(trackNumber, inst);
+    dynamicTrackNumber = seq.addTrack();
+    seq.setInstrument(dynamicTrackNumber, inst);
     seq.totalDuration = 4;
 }
 
@@ -105,26 +361,26 @@ async function createSynth() {
     synth = new ABCJS.synth.CreateSynth();
 }
 
-async function addNote(pitch, time) {
+async function addNote(pitch, start, trackNumber, instrument) {
     var note = {
         cmd: "note",
         duration: 4 / beats,
         gap: 0,
-        instrument: seq.currentInstrument[trackNumber],
+        instrument: instrument,
         pitch: parseInt(pitch),
-        start: (4 * parseInt(time)) / beats,
+        start: start,
         volume: 80,
     };
     seq.tracks[trackNumber].push(note);
 }
 
-async function removeNote(pitch, time) {
+async function removeNote(pitch, start, trackNumber, instrument) {
     const idx = seq.tracks[trackNumber].findIndex(
         (note) =>
             note.pitch === parseInt(pitch) &&
-            note.start === (4 * parseInt(time)) / beats,
+            note.start === start,
     );
-    if (idx !== -1) seq.tracks[0].splice(idx, 1);
+    if (idx !== -1) seq.tracks[trackNumber].splice(idx, 1);
 }
 
 document.querySelector("#tempo").addEventListener("change", (e) => {
@@ -133,7 +389,8 @@ document.querySelector("#tempo").addEventListener("change", (e) => {
 
 document.querySelector("#inst").addEventListener("change", (e) => {
     inst = document.querySelector("#inst").value;
-    seq.tracks[trackNumber].forEach((el) => {
+    console.log(inst)
+    seq.tracks[dynamicTrackNumber].forEach((el) => {
         el.instrument = inst;
     });
 });
@@ -149,27 +406,34 @@ document.querySelector("#play").addEventListener("click", async (e) => {
 });
 
 function playLoop() {
-  if (!loop) return;
+    if (!loop) return;
 
-  synth.prime().then(() => {
-    synth.start();
+    synth.prime().then(() => {
+        synth.start();
 
-    // Schedule the next loop after the total duration
-    setTimeout(() => {
-      playLoop();
-    }, synth.duration * 1000); // duration in ms
-  });
+        // Schedule the next loop after the total duration
+        setTimeout(() => {
+            playLoop();
+        }, synth.duration * 1000); // duration in ms
+    });
 }
 
-document.querySelector("#loop").addEventListener("click", async ()=>{
-    loop = true
+async function addStaticTrack(track) {
+    staticTrackNumber = seq.addTrack();
+    for (note of track) {
+        addNote(note.pitch, note.start, staticTrackNumber, note.instrument);
+    }
+}
+
+document.querySelector("#loop").addEventListener("click", async () => {
+    loop = true;
     await synth.init({
         sequence: seq,
         audioContext: audioCtx,
         millisecondsPerMeasure: (4 * 60000) / bpm,
     });
-    playLoop()
-})
+    playLoop();
+});
 
 document.querySelector("#stop").addEventListener("click", () => {
     loop = false;
@@ -182,5 +446,5 @@ document.addEventListener("DOMContentLoaded", (e) => {
         .then(() => createSequence())
         .then(() => addNoteListeners())
         .then(() => createSynth())
-        .then(() => (document.querySelector("#pianoRoll").scrollTop = 300));
+        .then(() => addStaticTrack(staticTrack));
 });
