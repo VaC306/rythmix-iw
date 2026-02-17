@@ -1,3 +1,10 @@
+
+:root{
+    --white-key-h: 24px;
+    --black-key-h: 16px;
+    --octave-h: 7*var(--white-key-h) + 5*var(--black-key-h)
+}
+
 .note-text{
     display: inline-block;
     width: 32px;
@@ -32,12 +39,12 @@
 
 
 .white-key {
-  height: 24px;
+  height: var(--white-key-h);
   background-color: #ccc;
 }
 
 .black-key {
-  height: 16px;
+  height: var(--black-key-h);
   background-color: #aaa;
 }
 
@@ -48,7 +55,7 @@
 }
 
 .h-scroll {
-  height: 360px;
+  height: 2*var(--octave-h);
   overflow-y: auto;
   overflow-x: auto;
 
