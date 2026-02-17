@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import es.ucm.fdi.iw.model.Topic;
+import es.ucm.fdi.iw.model.AppStats;
 import es.ucm.fdi.iw.model.Lorem;
 import es.ucm.fdi.iw.model.Message;
 import es.ucm.fdi.iw.model.Transferable;
@@ -122,4 +123,33 @@ public class AdminController {
     }
     return "{\"admin\": \"populated\"}";
   }
+
+
+  @GetMapping("/dashboard")
+  public String dashboard(Model model) {
+    long totalUsers = (Long) entityManager.createQuery("select count(u) from User u").getSingleResult();
+    
+    long publicRooms = 0;
+    // A definir la consulta
+    /*(Long) entityManager.createQuery("select count(r) from Rooms r where r.publicRoom=true").getSingleResult();*/ 
+    
+    long privateRooms = 0;
+    // A definir la consulta
+    /*(Long) entityManager.createQuery("select count(r) from Rooms r where r.publicRoom=false").getSingleResult();*/
+    
+    long totalWinners = 0;
+    // A definir la consulta
+
+    AppStats stats = new AppStats(publicRooms, privateRooms, totalUsers, totalWinners);
+    
+    model.addAttribute("stats", stats);
+    
+    return "dashboard";
+  }
+  
+
+
+
 }
+
+
