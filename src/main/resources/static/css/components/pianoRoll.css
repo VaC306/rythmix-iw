@@ -2,7 +2,7 @@
 :root{
     --white-key-h: 24px;
     --black-key-h: 16px;
-    --octave-h: 7*var(--white-key-h) + 5*var(--black-key-h)
+    --octave-h: calc(7*var(--white-key-h) + 5*var(--black-key-h))
 }
 
 .note-text{
@@ -55,7 +55,7 @@
 }
 
 .h-scroll {
-  height: 2*var(--octave-h);
+  height: calc(2 * var(--octave-h));
   overflow-y: auto;
   overflow-x: auto;
 
