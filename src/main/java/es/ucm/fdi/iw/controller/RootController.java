@@ -1,5 +1,6 @@
 package es.ucm.fdi.iw.controller;
 
+import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.model.User.Role;
 import es.ucm.fdi.iw.repository.ScoreRepository;
@@ -35,6 +36,9 @@ public class RootController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuditHelper auditHelper;
 
     @ModelAttribute
     public void populateModel(HttpSession session, Model model) {        
@@ -78,6 +82,9 @@ public class RootController {
         registerUser.setFirstName(firstName == null ? null : firstName.trim());
         registerUser.setLastName(lastName == null ? null : lastName.trim());
         model.addAttribute("registerUser", registerUser);
+
+        auditHelper.log(registerUser, "REGISTERED_USER", "Se ha registro un nuevo usuario llamado: " + registerUser.getUsername());
+
 
         if (registerUser.getUsername() == null || registerUser.getUsername().isBlank() ||
                 password == null || password.isBlank()) {

@@ -63,6 +63,66 @@
         </div>
       </div>
 
+      <div class="container my-5">
+        <h1 class="mb-4" th:text="#{dashboard.observability}"></h1>
+        
+        <form method="get" action="/admin/dashboard" class="row gb-3 mb-4">
+
+          <div class="col-md-4">
+            <h2>Elegir usuario</h2>
+            <select name="userId" class="form-select">
+              <option value=""> Todos los usuarios </option>
+              <option 
+              th:each="user: ${users}"
+              th:value="${user.id}"
+              th:text="${user.username}"
+              th:selected="${user.id == selectedUserId}">
+            </option>
+            </select>
+          </div>
+
+           <div class="col-md-4">
+            <h2>Selecciona una acción</h2>
+            <select name="actionPerformed" class="form-select">
+              <option value=""> Todas las acciones </option>
+              <option value="USER_LOGGED_IN">INICIO DE SESIÓN</option>
+              <option value="REGISTERED_USER">NUEVOS REGISTROS</option>
+              <option value="JOINED_LOBBY">UNIDOS A LOBBY</option>
+              <option value="STARTED_GAME">EMPEZADO JUEGOS</option>
+              <option value="GUESSED_SONG">ADIVINADO LA CANCIÓN</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="/admin/audit" class="btn btn-secondary">Limpiar Filtros</a>
+          </div>
+        </form>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Usuario (Quien)</th>
+              <th>Action (Qué)</th>
+              <th>Details </th>
+              <th>Time (Cuándo)</th>
+              
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="l : ${logs}">
+              <td th:text="${l.user.username}"></td>
+              <td th:text="${l.actionPerformed}"></td>
+              <td th:text="${l.moreDetails}"></td>
+              <td th:text="${#temporals.format(l.time, 'dd/MM/yyyy HH:mm:ss')}"></td>
+            </tr>
+            <tr th:if="${logs.empty}">
+              <td colspan="4" class="text-center"> No hay logs </td>
+            </tr>
+          </tbody>
+        </table>
+      
+      </div>
+
     </main>
 
     <th:block th:replace="~{fragments/footer.html :: footer}" />
