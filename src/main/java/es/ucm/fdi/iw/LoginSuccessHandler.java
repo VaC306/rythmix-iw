@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.model.Topic;
 import es.ucm.fdi.iw.model.User;
 
@@ -44,6 +45,9 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
 
   @Autowired
   private EntityManager entityManager;
+
+  @Autowired
+  private AuditHelper auditHelper;
 
   private static Logger log = LogManager.getLogger(LoginSuccessHandler.class);
 
@@ -72,6 +76,8 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         .setParameter("username", username)
         .getSingleResult();
     session.setAttribute("u", u);
+
+    auditHelper.log(u, "USER_LOGGED_IN", "Ha iniciado sesión el usuario " + username);
 
     // add 'url' and 'ws' session variables
     // example URLS: Root URL
