@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -22,7 +24,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
+import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.auxiliar.GameUtils;
 import es.ucm.fdi.iw.model.GarticGame;
 import es.ucm.fdi.iw.model.GarticGame.GarticGameStatus;
@@ -36,6 +40,8 @@ import es.ucm.fdi.iw.repository.MIDIInstrumentRepository;
 import es.ucm.fdi.iw.repository.MIDISequenceRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 @Controller()
 @RequestMapping("/gartic")
@@ -45,6 +51,9 @@ public class GarticController {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private AuditHelper auditHelper;
 
     private final MIDIGameRepository midiGameRepository;
     private final MIDISequenceRepository midiSequenceRepository;
@@ -147,10 +156,11 @@ public class GarticController {
             model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
         }
         model.addAttribute("isOwner", game.getOwner().getId() == u.getId());
+        model.addAttribute("isAdmin", u.hasRole(User.Role.ADMIN));
         model.addAttribute("currentRound", game.getCurrentRound());
         model.addAttribute("totalRounds", game.getTotalRounds());
         model.addAttribute("gameStatus", game.getStatus());
-        model.addAttribute("playerList", game.getPlayers().stream().map((p)->new PlayerInfo(p.getUsername(), game.getOwner().getId() == p.getId())).toList());
+        model.addAttribute("playerList", game.getPlayers().stream().map((p)->new PlayerInfo(p.getId(),p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         log.info("Lobby {} has {} players", lobbyCode, game.getPlayers().size());
         return "gartic";
     }
@@ -166,6 +176,9 @@ public class GarticController {
             model.addAttribute("errorBodyKey", "lobby.error.notlogged.body");
             return "lobby";
         }
+
+        auditHelper.log(u, "JOINED_LOBBY", "Se ha unido a la sala con id de sala: " + lobbyCode);
+
         Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(lobbyCode);
         if (optGame.isEmpty()) {
             log.warn("User {} tried to join missing lobby {}", u.getUsername(), lobbyCode);
@@ -179,7 +192,7 @@ public class GarticController {
         game.addPlayer(u);
         GameUpdate up = new GameUpdate("PLAYERSUPDATED",
                 game.getPlayers().stream()
-                        .map((p) -> new PlayerInfo(p.getUsername(), game.getOwner().getId() == p.getId())).toList());
+                        .map((p) -> new PlayerInfo(p.getId(), p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         messagingTemplate.convertAndSend("/topic/gartic/lobby/" + lobbyCode, up);
         return "redirect:/gartic/lobby/" + lobbyCode;
     }
@@ -194,6 +207,9 @@ public class GarticController {
         if (game.getOwner().getId() != request.userId)
             return;
         log.info("Starting game for lobby {} with {} players", lobbyCode, game.getPlayers().size());
+
+        auditHelper.log(game.getOwner(), "STARTED_GAME", "Se ha iniciado juego con id: " + lobbyCode + " con un total de: " + game.getPlayers().size() + " juagdores" );
+
         // Indicamos que la partida ha iniciado
         game.setStatus(GarticGameStatus.PLAYING);
         game.setTotalRounds(request.totalRounds);
@@ -281,7 +297,7 @@ public class GarticController {
     public record TrackSubmission(long userId, MIDITrack.Transfer track) {}
     public record RoundData(MIDIInstrument.Transfer instrumentData, MIDISequence.Transfer sequence) {}
     public record GameData(int currentRound, int totalRounds, String status, RoundData roundData) {}
-    public record PlayerInfo(String username, boolean isOwner) {}
+    public record PlayerInfo(Long id, String username, boolean isOwner) {}
     public record ChatMessage(String username, String text) {}
 
 }

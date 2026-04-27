@@ -1,11 +1,13 @@
 package es.ucm.fdi.iw.controller;
 
+import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.model.*;
 import es.ucm.fdi.iw.repository.*;
 
 import jakarta.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -19,6 +21,9 @@ import java.util.concurrent.ThreadLocalRandom;
 @Controller
 @RequestMapping("/guess")
 public class GuessController {
+
+  @Autowired
+  private AuditHelper auditHelper;
 
   private static final Logger log = LogManager.getLogger(GuessController.class);
 
@@ -194,6 +199,7 @@ public class GuessController {
 
       log.info("Usuario {} acertó la canción del daily={} y obtuvo {} puntos", u.getId(), dg.getId(), points);
       session.setAttribute("guessMsg", "✅ Correcto! +" + points + " puntos");
+      auditHelper.log(u, "GUESSED_SONG", " Se ha acertado al canción con id: " + song.getId());
     } else {
       at.setTries(at.getTries() + 1);
 

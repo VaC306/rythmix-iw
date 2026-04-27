@@ -1,5 +1,6 @@
 package es.ucm.fdi.iw.controller;
 
+import es.ucm.fdi.iw.repository.AuditWebRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,9 @@ import jakarta.transaction.Transactional;
 @Controller
 @RequestMapping("admin")
 public class AdminController {
+
+  @Autowired
+  private AuditWebRepository auditWebRepository;
 
   @Autowired
   private PasswordEncoder passwordEncoder;
@@ -126,7 +130,7 @@ public class AdminController {
 
 
   @GetMapping("/dashboard")
-  public String dashboard(Model model) {
+  public String dashboard(@RequestParam(required = false) Long userId, @RequestParam(required = false) String actionPerformed, Model model) {
     long totalUsers = (Long) entityManager.createQuery("select count(u) from User u").getSingleResult();
     
     long publicRooms = 0;
@@ -143,13 +147,16 @@ public class AdminController {
     AppStats stats = new AppStats(publicRooms, privateRooms, totalUsers, totalWinners);
     
     model.addAttribute("stats", stats);
+
+    if (actionPerformed != null && actionPerformed.isBlank())
+      actionPerformed = null;
     
+    model.addAttribute("logs", auditWebRepository.findByFiltersDesc(userId, actionPerformed));
+    model.addAttribute("users", entityManager.createQuery("select u from User u").getResultList());
+    model.addAttribute("selectedUserId", userId); 
+
     return "dashboard";
   }
-  
-
-
-
 }
 
 
