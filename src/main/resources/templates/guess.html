@@ -77,6 +77,9 @@
             </div>
 
             <audio id="player" preload="metadata" th:src="@{${currentLayer.audioUrl}}"></audio>
+            <div id="audioError" class="alert alert-warning mt-3 d-none" role="alert">
+              No hay audio disponible para esta capa todavia.
+            </div>
 
             <!-- Barra progreso -->
             <div class="px-2">
@@ -181,6 +184,7 @@
 
         const playIcon = document.getElementById("playIcon");
         const playText = document.getElementById("playText");
+        const audioError = document.getElementById("audioError");
 
         const fmt = (sec) => {
           if (!isFinite(sec) || sec < 0) return "0:00";
@@ -200,6 +204,7 @@
         };
 
         audio.addEventListener("loadedmetadata", () => {
+          audioError?.classList.add("d-none");
           tTotal.textContent = fmt(audio.duration);
           seek.value = 0;
           tCurrent.textContent = "0:00";
@@ -208,6 +213,7 @@
 
         audio.addEventListener("error", () => {
           console.error("Audio error:", audio.error);
+          audioError?.classList.remove("d-none");
           setPlayLabel(false);
         });
 

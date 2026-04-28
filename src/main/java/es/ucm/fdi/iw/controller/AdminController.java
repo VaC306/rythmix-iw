@@ -1,12 +1,22 @@
 package es.ucm.fdi.iw.controller;
 
+import es.ucm.fdi.iw.LocalData;
+import es.ucm.fdi.iw.model.Song;
+import es.ucm.fdi.iw.model.SongLayer;
+import es.ucm.fdi.iw.repository.SongLayerRepository;
+import es.ucm.fdi.iw.repository.SongRepository;
 import es.ucm.fdi.iw.repository.AuditWebRepository;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +27,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import es.ucm.fdi.iw.model.Topic;
 import es.ucm.fdi.iw.model.AppStats;
@@ -48,6 +59,18 @@ public class AdminController {
   @Autowired
   private EntityManager entityManager;
 
+  @Autowired
+  private SongRepository songRepository;
+
+  @Autowired
+  private SongLayerRepository songLayerRepository;
+
+  @Autowired
+  private LocalData localData;
+
+  @Value("${app.storage.music-dir:music/layer}")
+  private String musicDir;
+
   @ModelAttribute
   public void populateModel(HttpSession session, Model model) {
     for (String name : new String[] { "u", "url", "ws", "topics"}) {
@@ -58,11 +81,61 @@ public class AdminController {
   private static final Logger log = LogManager.getLogger(AdminController.class);
 
   @GetMapping("/")
-  public String index(Model model) {
+  public String index(
+      @RequestParam(required = false) String audioOk,
+      @RequestParam(required = false) String audioErr,
+      Model model) {
     log.info("Admin acaba de entrar");
     model.addAttribute("users",
         entityManager.createQuery("select u from User u").getResultList());
+    List<Song> songs = songRepository.findAll();
+    model.addAttribute("songs", songs);
+    model.addAttribute("layerRepo", songLayerRepository);
+    model.addAttribute("audioOk", audioOk);
+    model.addAttribute("audioErr", audioErr);
     return "admin";
+  }
+
+  @PostMapping("/song-layer/{id}/audio")
+  @Transactional
+  public String uploadLayerAudio(@PathVariable long id, @RequestParam("audio") MultipartFile audioFile) {
+    SongLayer layer = songLayerRepository.findById(id).orElse(null);
+    if (layer == null) {
+      log.warn("Subida rechazada: capa {} no encontrada", id);
+      return "redirect:/admin/?audioErr=Capa_no_encontrada";
+    }
+
+    if (audioFile == null || audioFile.isEmpty()) {
+      log.warn("Subida rechazada para capa {}: fichero vacío", id);
+      return "redirect:/admin/?audioErr=Fichero_vacio";
+    }
+
+    String originalName = audioFile.getOriginalFilename();
+    String safeName = originalName == null ? "" : originalName.trim().toLowerCase();
+    if (!safeName.endsWith(".mp3")) {
+      log.warn("Subida rechazada para capa {}: extensión inválida ({})", id, originalName);
+      return "redirect:/admin/?audioErr=Solo_mp3";
+    }
+
+    String contentType = audioFile.getContentType();
+    if (contentType != null &&
+        !"audio/mpeg".equalsIgnoreCase(contentType) &&
+        !"audio/mp3".equalsIgnoreCase(contentType)) {
+      log.warn("Subida rechazada para capa {}: contentType inválido ({})", id, contentType);
+      return "redirect:/admin/?audioErr=MIME_invalido";
+    }
+
+    File out = localData.getFile(musicDir, id + ".mp3");
+    try (BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(out))) {
+      stream.write(audioFile.getBytes());
+      layer.setAudioUrl("/song-layer/" + id + "/audio");
+      songLayerRepository.save(layer);
+      log.info("Audio subido para capa {} en {}", id, out.getAbsolutePath());
+      return "redirect:/admin/?audioOk=Audio_actualizado_capa_" + id;
+    } catch (IOException e) {
+      log.error("Error IO al subir audio para capa {}", id, e);
+      return "redirect:/admin/?audioErr=Error_guardando_fichero";
+    }
   }
 
   @PostMapping("/toggle/{id}")
