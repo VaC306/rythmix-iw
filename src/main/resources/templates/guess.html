@@ -23,14 +23,20 @@
           class="alert alert-info text-center d-flex justify-content-center align-items-center gap-2"
         >
           <i class="bi bi-info-circle-fill"></i>
-          <span th:text="${msg}"></span>
+          <span th:text="${#messages.msgOrNull(msg) ?: msg}"></span>
+        </div>
+
+        <div th:if="${noAudioAvailable}"
+             class="alert alert-danger text-center d-flex justify-content-center align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span th:text="#{guess.noAudioAdmin}"></span>
         </div>
 
         <!-- Si no hay sesión -->
         <div th:if="${loginWarning}"
              class="alert alert-warning text-center d-flex justify-content-center align-items-center gap-2">
           <i class="bi bi-person-x-fill"></i>
-          <span>Inicia sesión para jugar al daily.</span>
+          <span th:text="#{guess.loginWarning}">Inicia sesión para jugar al daily.</span>
         </div>
 
         <!-- Info canción (sin revelar título) -->
@@ -50,7 +56,7 @@
               <span th:text="#{guess.layers}"></span>:
               <strong th:text="${layerIndex + 1}"></strong>/<strong th:text="${maxLayer + 1}"></strong>
               <span th:text="#{guess.dotSeparator}"></span>
-              Intentos:
+              <span th:text="#{guess.tries}"></span>:
               <strong th:text="${tries}"></strong>/<strong th:text="${maxTries}"></strong>
             </p>
           </div>
@@ -78,7 +84,7 @@
 
             <audio id="player" preload="metadata" th:src="@{${currentLayer.audioUrl}}"></audio>
             <div id="audioError" class="alert alert-warning mt-3 d-none" role="alert">
-              No hay audio disponible para esta capa todavia.
+              <span th:text="#{guess.audioMissing}">No hay audio disponible para esta capa todavia.</span>
             </div>
 
             <!-- Barra progreso -->
@@ -91,6 +97,7 @@
                 max="100"
                 value="0"
                 step="0.1"
+                th:disabled="${noAudioAvailable}"
               />
               <div class="d-flex justify-content-between text-muted small">
                 <span id="tCurrent">0:00</span>
@@ -104,7 +111,7 @@
                 id="btnPlay"
                 type="button"
                 class="btn btn-primary px-5 d-inline-flex align-items-center gap-2"
-                th:disabled="${finished or !logged}"
+                th:disabled="${finished or !logged or noAudioAvailable}"
               >
                 <i id="playIcon" class="bi bi-play-fill"></i>
                 <span id="playText" th:text="#{guess.play}"></span>
@@ -115,7 +122,7 @@
                 <button
                   type="submit"
                   class="btn btn-outline-info px-4 d-inline-flex align-items-center gap-2"
-                  th:disabled="${layerIndex == maxLayer or finished or !logged}"
+                  th:disabled="${layerIndex == maxLayer or finished or !logged or noAudioAvailable}"
                 >
                   <span th:text="#{guess.next}"></span>
                   <i class="bi bi-skip-forward-fill"></i>
@@ -141,7 +148,7 @@
               class="row g-2 justify-content-center"
             >
               <div class="col-12 col-md-6">
-                <select class="form-select" name="answer" required th:disabled="${finished or !logged}">
+                <select class="form-select" name="answer" required th:disabled="${finished or !logged or noAudioAvailable}">
                   <option value="" disabled selected th:text="#{guess.selectPlaceholder}"></option>
                   <option
                     th:each="s : ${songList}"
@@ -156,7 +163,7 @@
                   class="btn btn-success"
                   type="submit"
                   th:text="#{guess.submit}"
-                  th:disabled="${finished or !logged}"
+                  th:disabled="${finished or !logged or noAudioAvailable}"
                 ></button>
               </div>
             </form>
@@ -185,6 +192,8 @@
         const playIcon = document.getElementById("playIcon");
         const playText = document.getElementById("playText");
         const audioError = document.getElementById("audioError");
+        const playLabel = "[[#{guess.play}]]";
+        const pauseLabel = "[[#{guess.pause}]]";
 
         const fmt = (sec) => {
           if (!isFinite(sec) || sec < 0) return "0:00";
@@ -196,10 +205,10 @@
         const setPlayLabel = (playing) => {
           if (playing) {
             playIcon.className = "bi bi-pause-fill";
-            playText.textContent = "Pausar";
+            playText.textContent = pauseLabel;
           } else {
             playIcon.className = "bi bi-play-fill";
-            playText.textContent = "Reproducir";
+            playText.textContent = playLabel;
           }
         };
 

@@ -14,8 +14,8 @@
     <main class="flex-shrink-0">
         <div class="container">
             <h1 class="mt-5">Administración</h1>
-            <div th:if="${audioOk}" class="alert alert-success mt-3" th:text="${audioOk}"></div>
-            <div th:if="${audioErr}" class="alert alert-danger mt-3" th:text="${audioErr}"></div>
+            <div th:if="${audioOk}" class="alert alert-success mt-3" th:text="#{${audioOk}}"></div>
+            <div th:if="${audioErr}" class="alert alert-danger mt-3" th:text="#{${audioErr}}"></div>
         </div>
         <div class="container">
             <h1 class="mt-5">Usuarios</h1>
@@ -67,7 +67,7 @@
                         <th>Canción</th>
                         <th>Capa</th>
                         <th>Audio actual</th>
-                        <th>Subir/Reemplazar MP3</th>
+                        <th th:text="#{admin.audio.uploadReplace}">Subir/Reemplazar MP3</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -1,5 +1,6 @@
 package es.ucm.fdi.iw.controller;
 
+import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.model.*;
 import es.ucm.fdi.iw.repository.*;
@@ -8,11 +9,13 @@ import jakarta.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +27,12 @@ public class GuessController {
 
   @Autowired
   private AuditHelper auditHelper;
+
+  @Autowired
+  private LocalData localData;
+
+  @Value("${app.storage.music-dir:music/layer}")
+  private String musicDir;
 
   private static final Logger log = LogManager.getLogger(GuessController.class);
 
@@ -92,8 +101,13 @@ public class GuessController {
     model.addAttribute("maxLayer", layers.size() - 1);
     model.addAttribute("tries", tries);
     model.addAttribute("maxTries", dg.getMaxTries());
-    model.addAttribute("finished", finished);
+    boolean hasAnyAudio = hasAnyAvailableAudio(layers);
+    if (!hasAnyAudio) {
+      log.warn("Daily {} sin audios disponibles para songId={}", dg.getId(), song.getId());
+    }
+    model.addAttribute("finished", finished || !hasAnyAudio);
     model.addAttribute("success", success);
+    model.addAttribute("noAudioAvailable", !hasAnyAudio);
 
     Object msg = session.getAttribute("guessMsg");
     if (msg != null) {
@@ -125,6 +139,11 @@ public class GuessController {
 
     DailyGame dg = getOrCreateDaily(LocalDate.now());
     List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(dg.getSong());
+    if (!hasAnyAvailableAudio(layers)) {
+      log.info("Usuario {} intentó navegar capas sin audios disponibles en daily={}", u.getId(), dg.getId());
+      session.setAttribute("guessMsg", "guess.noAudioAdmin");
+      return "redirect:/guess";
+    }
     int max = Math.max(0, layers.size() - 1);
 
     Attempt at = attemptRepo.findByUserAndDailyGame(u, dg)
@@ -174,6 +193,11 @@ public class GuessController {
     DailyGame dg = getOrCreateDaily(LocalDate.now());
     Song song = dg.getSong();
     List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
+    if (!hasAnyAvailableAudio(layers)) {
+      log.info("Usuario {} intentó enviar respuesta sin audios disponibles en daily={}", u.getId(), dg.getId());
+      session.setAttribute("guessMsg", "guess.noAudioAdmin");
+      return "redirect:/guess";
+    }
     int maxLayer = Math.max(0, layers.size() - 1);
 
     Attempt at = attemptRepo.findByUserAndDailyGame(u, dg)
@@ -308,5 +332,26 @@ public class GuessController {
 
   private static String normalize(String s) {
     return s == null ? "" : s.trim().toLowerCase();
+  }
+
+  private boolean hasAnyAvailableAudio(List<SongLayer> layers) {
+    for (SongLayer layer : layers) {
+      if (isAudioAvailable(layer)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isAudioAvailable(SongLayer layer) {
+    String url = layer.getAudioUrl();
+    if (url == null || url.isBlank()) {
+      return false;
+    }
+    if (url.startsWith("/song-layer/")) {
+      File f = localData.getFile(musicDir, layer.getId() + ".mp3");
+      return f.exists() && f.isFile();
+    }
+    return GuessController.class.getClassLoader().getResource("static" + url) != null;
   }
 }
