@@ -44,6 +44,46 @@ La estructura del proyecto está pensada para facilitar la ampliación futura co
 
 ---
 
+## 🔊 Subida de audios MP3
+
+Los administradores pueden subir/reemplazar MP3 de capas de canciones desde `/admin/`.
+
+- Los ficheros se guardan fuera de `src/main/resources/static` (en `iwdata/music/layer/`).
+- El audio se sirve por endpoint (`/song-layer/{id}/audio`), sin recompilar para cambiar canciones.
+- Si falta audio para una capa, el juego muestra aviso en pantalla.
+
+### Procesado opcional con FFmpeg
+
+Si se activa `app.audio.trim.enabled=true`, al subir un MP3 se aplica:
+
+- recorte a máximo `app.audio.trim.max-seconds` (por defecto 60s), centrado en el audio,
+- recompresión MP3 con bitrate `app.audio.compress.bitrate` (por defecto `192k`).
+
+Si FFmpeg no está instalado y el recorte está activado, la subida falla con mensaje para instalarlo o desactivar el recorte.
+
+### Instalar FFmpeg
+
+- Windows (Chocolatey): `choco install ffmpeg`
+- Windows (winget): `winget install Gyan.FFmpeg`
+- macOS (Homebrew): `brew install ffmpeg`
+- Ubuntu/Debian: `sudo apt install ffmpeg`
+
+Verificación:
+
+- `ffmpeg -version`
+- `ffprobe -version`
+
+### Configuración relevante
+
+En `src/main/resources/application.properties`:
+
+- `app.storage.music-dir=music/layer`
+- `app.audio.trim.enabled=false`
+- `app.audio.trim.max-seconds=60`
+- `app.audio.compress.bitrate=192k`
+
+---
+
 ## 🎓 Contexto académico
 
 Este proyecto ha sido desarrollado como parte de la asignatura *Ingeniería Web (IW)*, aplicando el patrón MVC, control de acceso con Spring Security y buenas prácticas de desarrollo web.

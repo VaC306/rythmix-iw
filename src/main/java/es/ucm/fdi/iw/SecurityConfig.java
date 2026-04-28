@@ -64,6 +64,7 @@ public class SecurityConfig {
 					"/js/**", 
 					"/img/**", 
 					"/music/**", 
+					"/song-layer/**",
 					"/", 
 					"/error", 
 					"/about", 

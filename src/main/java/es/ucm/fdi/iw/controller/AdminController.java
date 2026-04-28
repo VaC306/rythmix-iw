@@ -1,12 +1,28 @@
 package es.ucm.fdi.iw.controller;
 
+import es.ucm.fdi.iw.LocalData;
+import es.ucm.fdi.iw.model.Song;
+import es.ucm.fdi.iw.model.SongLayer;
+import es.ucm.fdi.iw.repository.SongLayerRepository;
+import es.ucm.fdi.iw.repository.SongRepository;
 import es.ucm.fdi.iw.repository.AuditWebRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +33,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import es.ucm.fdi.iw.model.Topic;
 import es.ucm.fdi.iw.model.AppStats;
@@ -48,6 +65,33 @@ public class AdminController {
   @Autowired
   private EntityManager entityManager;
 
+  @Autowired
+  private SongRepository songRepository;
+
+  @Autowired
+  private SongLayerRepository songLayerRepository;
+
+  @Autowired
+  private LocalData localData;
+
+  @Value("${app.storage.music-dir:music/layer}")
+  private String musicDir;
+
+  @Value("${app.audio.trim.enabled:false}")
+  private boolean trimEnabled;
+
+  @Value("${app.audio.trim.max-seconds:60}")
+  private int trimMaxSeconds;
+
+  @Value("${app.audio.compress.bitrate:192k}")
+  private String compressBitrate;
+
+  @Value("${app.audio.ffmpeg.command:ffmpeg}")
+  private String ffmpegCommand;
+
+  @Value("${app.audio.ffprobe.command:ffprobe}")
+  private String ffprobeCommand;
+
   @ModelAttribute
   public void populateModel(HttpSession session, Model model) {
     for (String name : new String[] { "u", "url", "ws", "topics"}) {
@@ -58,11 +102,174 @@ public class AdminController {
   private static final Logger log = LogManager.getLogger(AdminController.class);
 
   @GetMapping("/")
-  public String index(Model model) {
+  public String index(
+      @RequestParam(required = false) String audioOk,
+      @RequestParam(required = false) String audioErr,
+      Model model) {
     log.info("Admin acaba de entrar");
     model.addAttribute("users",
         entityManager.createQuery("select u from User u").getResultList());
+    List<Song> songs = songRepository.findAll();
+    model.addAttribute("songs", songs);
+    model.addAttribute("layerRepo", songLayerRepository);
+    model.addAttribute("audioOk", audioOk);
+    model.addAttribute("audioErr", audioErr);
     return "admin";
+  }
+
+  @PostMapping("/song-layer/{id}/audio")
+  @Transactional
+  public String uploadLayerAudio(@PathVariable long id, @RequestParam("audio") MultipartFile audioFile) {
+    SongLayer layer = songLayerRepository.findById(id).orElse(null);
+    if (layer == null) {
+      log.warn("Subida rechazada: capa {} no encontrada", id);
+      return "redirect:/admin/?audioErr=admin.audio.err.layerNotFound";
+    }
+
+    if (audioFile == null || audioFile.isEmpty()) {
+      log.warn("Subida rechazada para capa {}: fichero vacío", id);
+      return "redirect:/admin/?audioErr=admin.audio.err.emptyFile";
+    }
+
+    String originalName = audioFile.getOriginalFilename();
+    String safeName = originalName == null ? "" : originalName.trim().toLowerCase();
+    if (!safeName.endsWith(".mp3")) {
+      log.warn("Subida rechazada para capa {}: extensión inválida ({})", id, originalName);
+      return "redirect:/admin/?audioErr=admin.audio.err.onlyMp3";
+    }
+
+    String contentType = audioFile.getContentType();
+    if (contentType != null &&
+        !"audio/mpeg".equalsIgnoreCase(contentType) &&
+        !"audio/mp3".equalsIgnoreCase(contentType)) {
+      log.warn("Subida rechazada para capa {}: contentType inválido ({})", id, contentType);
+      return "redirect:/admin/?audioErr=admin.audio.err.invalidMime";
+    }
+
+    File out = localData.getFile(musicDir, id + ".mp3");
+    File tmpIn = localData.getFile(musicDir, id + ".upload.mp3");
+    File tmpOut = localData.getFile(musicDir, id + ".processed.mp3");
+
+    try (BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(tmpIn))) {
+      stream.write(audioFile.getBytes());
+
+      if (trimEnabled) {
+        ProcessingResult pr = processWithFfmpeg(tmpIn, tmpOut);
+        if (!pr.ok()) {
+          log.warn("Subida rechazada para capa {}: {}", id, pr.message());
+          return "redirect:/admin/?audioErr=" + pr.message();
+        }
+        Files.move(tmpOut.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      } else {
+        Files.move(tmpIn.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      }
+
+      layer.setAudioUrl("/song-layer/" + id + "/audio");
+      songLayerRepository.save(layer);
+      log.info("Audio subido para capa {} en {}", id, out.getAbsolutePath());
+      return "redirect:/admin/?audioOk=admin.audio.ok.updated";
+    } catch (IOException e) {
+      log.error("Error IO al subir audio para capa {}", id, e);
+      return "redirect:/admin/?audioErr=admin.audio.err.saveFailed";
+    } finally {
+      if (tmpIn.exists() && !tmpIn.delete()) {
+        log.warn("No se pudo borrar temporal {}", tmpIn.getAbsolutePath());
+      }
+      if (tmpOut.exists() && !tmpOut.delete()) {
+        log.warn("No se pudo borrar temporal {}", tmpOut.getAbsolutePath());
+      }
+    }
+  }
+
+  private ProcessingResult processWithFfmpeg(File input, File output) {
+    Double duration = probeDurationSeconds(input);
+    if (duration == null) {
+      return new ProcessingResult(false, "admin.audio.err.ffprobeFailed");
+    }
+
+    double start = 0.0d;
+    double clipLength = duration;
+    if (duration > trimMaxSeconds) {
+      start = (duration - trimMaxSeconds) / 2.0d;
+      clipLength = trimMaxSeconds;
+    }
+
+    List<String> cmd = List.of(
+        ffmpegCommand,
+        "-y",
+        "-ss", String.format(Locale.US, "%.3f", start),
+        "-i", input.getAbsolutePath(),
+        "-t", String.format(Locale.US, "%.3f", clipLength),
+        "-acodec", "libmp3lame",
+        "-b:a", compressBitrate,
+        output.getAbsolutePath());
+
+    try {
+      Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+      String logs = readProcessOutput(p);
+      int code = p.waitFor();
+      if (code != 0 || !output.exists() || output.length() == 0) {
+        log.error("ffmpeg fallo (code={}): {}", code, logs);
+        return new ProcessingResult(false, "admin.audio.err.ffmpegProcessing");
+      }
+      log.info("Audio procesado con ffmpeg: duracion_original={}s, inicio={}s, duracion_final={}s, bitrate={}",
+          duration, start, clipLength, compressBitrate);
+      return new ProcessingResult(true, "ok");
+    } catch (IOException e) {
+      log.error("ffmpeg no disponible", e);
+      return new ProcessingResult(false, "admin.audio.err.ffmpegMissing");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.error("Interrumpido al ejecutar ffmpeg", e);
+      return new ProcessingResult(false, "admin.audio.err.ffmpegInterrupted");
+    }
+  }
+
+  private Double probeDurationSeconds(File input) {
+    List<String> cmd = List.of(
+        ffprobeCommand,
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        input.getAbsolutePath());
+    try {
+      Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+      String out = readProcessOutput(p).trim();
+      int code = p.waitFor();
+      if (code != 0 || out.isEmpty()) {
+        log.error("ffprobe fallo (code={}): {}", code, out);
+        return null;
+      }
+      return Double.parseDouble(out);
+    } catch (IOException e) {
+      log.error("ffprobe no disponible", e);
+      return null;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.error("Interrumpido al ejecutar ffprobe", e);
+      return null;
+    } catch (NumberFormatException e) {
+      log.error("No se pudo parsear duracion de ffprobe: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private String readProcessOutput(Process process) throws IOException {
+    try (BufferedReader reader = new BufferedReader(
+        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+      StringBuilder sb = new StringBuilder();
+      String line;
+      while ((line = reader.readLine()) != null) {
+        if (!sb.isEmpty()) {
+          sb.append('\n');
+        }
+        sb.append(line);
+      }
+      return sb.toString();
+    }
+  }
+
+  private record ProcessingResult(boolean ok, String message) {
   }
 
   @PostMapping("/toggle/{id}")

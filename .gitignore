@@ -38,6 +38,8 @@ iwdb*
   
 # Datos de usuario
 iwdata*
+iwdata/music/
+data/music/
 
 # Credenciales
 credentials.json
