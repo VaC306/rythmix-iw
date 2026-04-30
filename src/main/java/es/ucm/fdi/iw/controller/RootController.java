@@ -155,7 +155,7 @@ public class RootController {
             case "sorpresa":
                 gameName = "🎲 Canción sorpresa";
                 break;
-            case "continuacion":
+            case "continue":
                 gameName = "▶️ Continuación de canción";
                 break;
             default:

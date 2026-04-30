@@ -40,6 +40,9 @@
         <!-- Sala de espera -->
         <template id="waiting-room"><th:block th:replace="~{fragments/waiting-room :: waiting-room}"></th:block></template>
 
+        <!-- Pantalla de votacion -->
+        <template id="voting-screen"><th:block th:replace="~{fragments/voting-screen :: voting-screen}"></th:block></template>
+        
         <!-- Pantalla final -->
         <template id="end-screen"><th:block th:replace="~{fragments/end-screen :: end-screen}"></th:block></template>
         
@@ -67,31 +70,11 @@
 <th:block th:replace="~{fragments/footer.html :: footer}" />
 </body>
 <script type="text/javascript">
-    // Set global variables for JavaScript
-    window.isOwner = /*[[${isOwner}]]*/ false;
-    window.lobbyCode = /*[[${lobbyCode}]]*/ '';
-    window.username = /*[[${u?.username}]]*/ 'Unknown';
-    window.userId = /*[[${userId}]]*/ 0;
-    window.currentRound = /*[[${currentRound}]]*/ 0;
-    window.totalRounds = /*[[${totalRounds}]]*/ 0;
-    window.gameStatus = /*[[${gameStatus}]]*/ 'WAITING';
-    
-    // Parse player list
-    window.initialPlayers = /*[[${playerList}]]*/ [];
-    
-    // Debug output to verify data is loaded
-    console.log("=== Continue Page Loaded ===");
-    console.log("lobbyCode:", window.lobbyCode);
-    console.log("userId:", window.userId);
-    console.log("isOwner:", window.isOwner);
-    console.log("username:", window.username);
-    console.log("currentRound:", window.currentRound);
-    console.log("totalRounds:", window.totalRounds);
-    console.log("gameStatus:", window.gameStatus);
-    console.log("initialPlayers:", window.initialPlayers);
-    console.log("============================");
+    const isOwner = "[[${isOwner}]]"=="true"
+    const lobbyCode = "[[${lobbyCode}?:'']]"
+    const username  = "[[${u?.username}?:'Unknown']]"
 </script>
-<script th:src="@{/js/components/continue-game-client.js}" src="/js/components/game-client.js" defer></script>
+<script th:src="@{/js/components/continue-game-client.js}" src="/js/components/continue-game-client.js" defer></script>
 <script th:src="@{/js/components/piano-roll.js}" src="/js/components/piano-roll.js" defer></script>
 <script th:src="@{/js/abcjs-basic-min.js}" src="/js/abcjs-basic-min.js" defer></script>
 <script th:src="@{/js/components/game-chat.js}" src="/js/components/game-chat.js" defer></script>
