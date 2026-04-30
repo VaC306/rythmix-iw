@@ -17,9 +17,12 @@ const selectors = {
   playerCounter: ".player-counter",
   playerList: "#player-list",
   endScreenCardsContainer: "#end-screen-cards-container",
+  votingScreenCardsContainer: "#voting-screen-cards-container",
+  voteConfirmButton: "#vote-confirm-button",
   waitingRoomTemplate: "#waiting-room",
   gameScreenTemplate: "#game-screen",
   trackSentTemplate: "#track-sent",
+  votingScreenTemplate: "#voting-screen",
   endScreenTemplate: "#end-screen",
   instrumentSelectContainer: "#instrument-select-container",
   numberOfRoundsSelector: "#select-rounds",
@@ -29,7 +32,11 @@ let gameData,
   pianoRoll,
   availableInstruments = null,
   playing = false,
-  ended=false;
+  ended = false,
+  selectedVoteSequenceId = null,
+  votingStarted = false,
+  voteSubmitted = false,
+  playerCount = 0;
 
 function subscribeWhenReady(lobbyCode) {
   const interval = setInterval(() => {
@@ -54,6 +61,8 @@ function handleMessage(m) {
     case "GAMESTARTED":
     case "NEWROUND":
         playing = true;
+      votingStarted = false;
+      voteSubmitted = false;
       showScreen(selectors.gameScreenTemplate);
       gameData = m.data;
       setupGameScreen();
@@ -65,11 +74,19 @@ function handleMessage(m) {
         ended=true;
       showScreen(selectors.endScreenTemplate);
       setupEndScreen(m.data);
+      break;
+    case "VOTINGSTARTED":
+      votingStarted = true;
+      voteSubmitted = false;
+      showScreen(selectors.votingScreenTemplate);
+      setupVotingScreen(m.data);
+      break;
   }
 }
 
 function updatePlayers(list) {
   console.log("Updating players...");
+  playerCount = list.length;
   document.querySelector(selectors.playerList).innerHTML = "";
   document.querySelectorAll(selectors.playerCounter).forEach((el) => (el.textContent = list.length));
   const ownerBadge = `<span class="badge bg-warning text-dark">Owner</span>`;
@@ -126,10 +143,9 @@ function sendTrack() {
     headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
     body: JSON.stringify(pianoRoll.getEditableTrack()),
   }).then((r) => {
-    if (r.ok && !playing && !ended) showScreen(selectors.trackSentTemplate);
-    else {
-      console.log(r.status);
-    }
+    if (r.ok && playerCount > 1) showScreen(selectors.trackSentTemplate);
+    else if (r.ok) console.log("Track submitted");
+    else console.log(r.status);
   });
 }
 
@@ -295,9 +311,126 @@ async function getAllSequences(retries = 5) {
 }
 
 async function setupEndScreen() {
-    const sequences = await getAllSequences()
-  console.log(sequences);
-  setupCards(sequences);
+    const finalTrack = await getAllSequences()
+  console.log(finalTrack);
+  setupCards(finalTrack ? [finalTrack] : []);
+}
+
+function createVotingCardHTML(params) {
+  const html = `
+    <div class="card flex-shrink-0" style="width: 22rem;" data-sequence-id="${params.sequenceId}">
+      <div class="card-body">
+        <h5 class="card-title">Secuencia de ${params.playerName}</h5>
+        <div class="row align-items-center mb-2">
+          <div class="col">
+            <input id="${params.progressBarId}" type="range" class="form-range">
+          </div>
+          <div class="col-auto">                        
+            <div class="btn-group" role="group">
+              <button id="${params.playButtonId}" type="button" class="btn btn-primary">
+                <i class="bi bi-play-fill"></i>
+              </button>
+              <button id="${params.pauseButtonId}" type="button" class="btn btn-primary">
+                <i class="bi bi-pause-fill"></i>
+              </button>
+              <button id="${params.stopButtonId}" type="button" class="btn btn-primary">
+                <i class="bi bi-stop-fill"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="vote-count text-muted">Votos: <span id="${params.voteCountId}">${params.voteCount}</span></div>
+        <button id="${params.voteButtonId}" class="btn btn-outline-primary w-100 mt-2" type="button">Votar</button>
+      </div>
+    </div>
+    `;
+  return html;
+}
+
+async function setupVotingScreen(data) {
+  const sequences = data.sequences;
+  const voteCounts = data.voteCounts || {};
+  selectedVoteSequenceId = null;
+  document.querySelector(selectors.voteConfirmButton).disabled = true;
+  document.querySelector(selectors.votingScreenCardsContainer).innerHTML = "";
+  for (let i in sequences) {
+    const seq = sequences[i];
+    const seqId = seq.id;
+    const voteCount = voteCounts[seqId] || 0;
+    document.querySelector(selectors.votingScreenCardsContainer).insertAdjacentHTML(
+      "beforeend",
+      createVotingCardHTML({
+        sequenceId: seqId,
+        playerName: seq.playerName || ("Jugador " + (parseInt(i) + 1)),
+        progressBarId: `votingProgressBar${i}`,
+        playButtonId: `votingPlayButton${i}`,
+        pauseButtonId: `votingPauseButton${i}`,
+        stopButtonId: `votingStopButton${i}`,
+        voteCountId: `votingVoteCount${i}`,
+        voteButtonId: `votingVoteButton${i}`,
+        voteCount: voteCount,
+      }),
+    );
+    let pr = new PianoRoll({});
+    pr.setFixedTracks(seq.tracks);
+    pr.bindControls({
+      playButton: `#votingPlayButton${i}`,
+      pauseButton: `#votingPauseButton${i}`,
+      stopButton: `#votingStopButton${i}`,
+      progressBar: `#votingProgressBar${i}`,
+    });
+    document.querySelector(`#votingVoteButton${i}`).addEventListener("click", () => {
+      document.querySelectorAll(selectors.votingScreenCardsContainer + " .card").forEach((card) => {
+        card.classList.remove("border-primary");
+        const btn = card.querySelector("button[id^='votingVoteButton']");
+        if (btn) {
+          btn.classList.remove("btn-primary");
+          btn.classList.add("btn-outline-primary");
+        }
+      });
+      const clickedCard = document.querySelector(`.card[data-sequence-id="${seqId}"]`);
+      clickedCard.classList.add("border-primary");
+      const clickedBtn = clickedCard.querySelector(`#votingVoteButton${i}`);
+      clickedBtn.classList.remove("btn-outline-primary");
+      clickedBtn.classList.add("btn-primary");
+      selectedVoteSequenceId = seqId;
+      document.querySelector(selectors.voteConfirmButton).disabled = false;
+    });
+  }
+  document.querySelector(selectors.voteConfirmButton).addEventListener("click", () => {
+    if (selectedVoteSequenceId !== null) {
+      sendVote(selectedVoteSequenceId);
+    }
+  });
+}
+
+function sendVote(sequenceId) {
+  console.log("Voting for sequence", sequenceId);
+  fetch(`/api/continue/lobby/${lobbyCode}/vote`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    body: JSON.stringify({ sequenceId: sequenceId }),
+  }).then((r) => {
+    if (r.ok) {
+      console.log("Vote sent");
+      voteSubmitted = true;
+      document.querySelector(selectors.voteConfirmButton).disabled = true;
+      document.querySelectorAll(selectors.votingScreenCardsContainer + " .card").forEach((card) => {
+        card.querySelectorAll("button[id^='votingVoteButton']").forEach((btn) => {
+          btn.disabled = true;
+        });
+      });
+      const existingMsg = document.querySelector("#vote-waiting-message");
+      if (!existingMsg) {
+        document.querySelector(selectors.votingScreenCardsContainer).insertAdjacentHTML(
+          "afterend",
+          '<div id="vote-waiting-message" class="mt-3"><h5>Esperando a los dem&aacute;s jugadores</h5></div>',
+        );
+      }
+    } else {
+      console.log(r.status);
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", (e) => {
