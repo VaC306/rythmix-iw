@@ -197,94 +197,96 @@ public class GarticController {
         return "redirect:/gartic/lobby/" + lobbyCode;
     }
 
-    @MessageMapping("/gartic/lobby/{lobbyCode}/start")
-    @Transactional
-    public void startGame(@DestinationVariable String lobbyCode, @Payload GameStartRequest request) {
-        // Obtenemos la partida
-        GarticGame game = (GarticGame) midiGameRepository.findByLobbyCode(lobbyCode)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid lobby code"));
-        // Solo el propietario puede iniciar la partida
-        if (game.getOwner().getId() != request.userId)
-            return;
-        log.info("Starting game for lobby {} with {} players", lobbyCode, game.getPlayers().size());
+    // @MessageMapping("/gartic/lobby/{lobbyCode}/start")
+    // @Transactional
+    // public void startGame(@DestinationVariable String lobbyCode, @Payload GameStartRequest request) {
+    //     // Obtenemos la partida
+    //     GarticGame game = (GarticGame) midiGameRepository.findByLobbyCode(lobbyCode)
+    //             .orElseThrow(() -> new IllegalArgumentException("Invalid lobby code"));
+    //     // Solo el propietario puede iniciar la partida
+    //     if (game.getOwner().getId() != request.userId)
+    //         return;
+    //     log.info("Starting game for lobby {} with {} players", lobbyCode, game.getPlayers().size());
 
-        auditHelper.log(game.getOwner(), "STARTED_GAME", "Se ha iniciado juego con id: " + lobbyCode + " con un total de: " + game.getPlayers().size() + " juagdores" );
+    //     auditHelper.log(game.getOwner(), "STARTED_GAME", "Se ha iniciado juego con id: " + lobbyCode + " con un total de: " + game.getPlayers().size() + " juagdores" );
 
-        // Indicamos que la partida ha iniciado
-        game.setStatus(GarticGameStatus.PLAYING);
-        game.setTotalRounds(request.totalRounds);
-        game.setRoundInstruments(request.roundInstruments);
-        for (User p : game.getPlayers()) {
-            log.debug("Creating sequence for player {} in lobby {}", p.getUsername(), lobbyCode);
-            // Creamos una secuencia vacia para cada jugador
-            MIDISequence seq = new MIDISequence();
-            seq.setTracks(new LinkedList<MIDITrack>());
-            seq.setGame(game);
-            game.getSequences().add(seq);
-            midiSequenceRepository.save(seq);
-            // La asignamos al jugador
-            game.getSequenceAssignments().put(p.getId(), seq.getId());
-            game.getTrackSubmissions().put(p.getId(), false);
-            // Enviamos los datos al jugador
-            MIDIInstrument.Transfer instruData = midiInstrumentRepository
-                    .findByProgram(game.getRoundInstruments().get(game.getCurrentRound()))
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid Program")).toTransfer();
-            GameData data = new GameData(game.getCurrentRound(), game.getTotalRounds(), game.getStatus().name(),
-                    new RoundData(instruData, seq.toTransfer()));
-            GameUpdate up = new GameUpdate("GAMESTARTED", data);
-            messagingTemplate.convertAndSendToUser(p.getUsername(), "/queue/gartic/lobby/" + lobbyCode, up);
-        }
-    }
+    //     // Indicamos que la partida ha iniciado
+    //     game.setStatus(GarticGameStatus.PLAYING);
+    //     game.setTotalRounds(request.totalRounds);
+    //     game.setRoundInstruments(request.roundInstruments);
+    //     for (User p : game.getPlayers()) {
+    //         log.debug("Creating sequence for player {} in lobby {}", p.getUsername(), lobbyCode);
+    //         // Creamos una secuencia vacia para cada jugador
+    //         MIDISequence seq = new MIDISequence();
+    //         seq.setTracks(new LinkedList<MIDITrack>());
+    //         seq.setGame(game);
+    //         game.getSequences().add(seq);
+    //         midiSequenceRepository.save(seq);
+    //         // La asignamos al jugador
+    //         game.getSequenceAssignments().put(p.getId(), seq.getId());
+    //         game.getTrackSubmissions().put(p.getId(), false);
+    //         // Enviamos los datos al jugador
+    //         MIDIInstrument.Transfer instruData = midiInstrumentRepository
+    //                 .findByProgram(game.getRoundInstruments().get(game.getCurrentRound()))
+    //                 .orElseThrow(() -> new IllegalArgumentException("Invalid Program")).toTransfer();
+    //         GameData data = new GameData(game.getCurrentRound(), game.getTotalRounds(), game.getStatus().name(),
+    //                 new RoundData(instruData, seq.toTransfer()));
+    //         GameUpdate up = new GameUpdate("GAMESTARTED", data);
+    //         messagingTemplate.convertAndSendToUser(p.getUsername(), "/queue/gartic/lobby/" + lobbyCode, up);
+    //     }
+    // }
 
-    @MessageMapping("/gartic/lobby/{lobbyCode}/tracks/post")
-    @SendToUser("/queue/gartic/lobby/{lobbyCode}")
-    @Transactional
-    public GameUpdate receiveTrack(@DestinationVariable String lobbyCode, @Payload TrackSubmission submission) {
-        // Obtenemos la partida
-        GarticGame game = (GarticGame) midiGameRepository.findByLobbyCode(lobbyCode)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid lobby code"));
-        // Anadimos el nuevo track a la secuencia
-        long sequenceId = game.getSequenceAssignments()
-                .get(submission.userId);
-        MIDISequence sequence = midiSequenceRepository.findById(sequenceId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid sequence ID"));
-        sequence.getTracks().add(new MIDITrack(submission.track, sequence));
-        game.getTrackSubmissions().put(submission.userId, true);
-        midiSequenceRepository.save(sequence);
-        midiGameRepository.save(game);
-        if (!game.getTrackSubmissions().containsValue(false)) {
-            // Todos los jugadores han acabado
-            // Actualizamos la ronda
-            game.setCurrentRound(game.getCurrentRound() + 1);
-            // El juego ha acabado
-            if (game.getCurrentRound() == game.getTotalRounds()) {
-                messagingTemplate.convertAndSend("/topic/gartic/lobby/" + lobbyCode, new GameUpdate("GAMEENDED",
-                        game.getSequences().stream().map(MIDISequence::toTransfer).toList()));
-                return new GameUpdate("NULL", null);
-            }
-            // Ponemos que ningun jugador ha enviado su track
-            game.getTrackSubmissions().replaceAll((k, v) -> false);
-            // Desplazamos las secuencias de cada jugador
-            game.setSequenceAssignments(GameUtils.shiftValuesRight(game.getSequenceAssignments()));
-            // Notificamos que empieza una nueva ronda y enviamos a cada jugador su nueva
-            // secuencia
-            for (User p : game.getPlayers()) {
-                long playerSequenceId = game.getSequenceAssignments()
-                        .get(p.getId());
-                MIDISequence seq = midiSequenceRepository.findById(playerSequenceId)
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid sequence ID"));
-                MIDIInstrument.Transfer instruData = midiInstrumentRepository
-                        .findByProgram(game.getRoundInstruments().get(game.getCurrentRound()))
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid Program")).toTransfer();
-                GameData data = new GameData(game.getCurrentRound(), game.getTotalRounds(), game.getStatus().name(),
-                        new RoundData(instruData, seq.toTransfer()));
-                GameUpdate up = new GameUpdate("NEWROUND", data);
-                messagingTemplate.convertAndSendToUser(p.getUsername(), "/queue/gartic/lobby/" + lobbyCode, up);
-            }
-            return new GameUpdate("NULL", null);
-        }
-        return new GameUpdate("TRACKRECEIVED", null);
-    }
+    
+
+    // @MessageMapping("/gartic/lobby/{lobbyCode}/tracks/post")
+    // @SendToUser("/queue/gartic/lobby/{lobbyCode}")
+    // @Transactional
+    // public GameUpdate receiveTrack(@DestinationVariable String lobbyCode, @Payload TrackSubmission submission) {
+    //     // Obtenemos la partida
+    //     GarticGame game = (GarticGame) midiGameRepository.findByLobbyCode(lobbyCode)
+    //             .orElseThrow(() -> new IllegalArgumentException("Invalid lobby code"));
+    //     // Anadimos el nuevo track a la secuencia
+    //     long sequenceId = game.getSequenceAssignments()
+    //             .get(submission.userId);
+    //     MIDISequence sequence = midiSequenceRepository.findById(sequenceId)
+    //             .orElseThrow(() -> new IllegalArgumentException("Invalid sequence ID"));
+    //     sequence.getTracks().add(new MIDITrack(submission.track, sequence));
+    //     game.getTrackSubmissions().put(submission.userId, true);
+    //     midiSequenceRepository.save(sequence);
+    //     midiGameRepository.save(game);
+    //     if (!game.getTrackSubmissions().containsValue(false)) {
+    //         // Todos los jugadores han acabado
+    //         // Actualizamos la ronda
+    //         game.setCurrentRound(game.getCurrentRound() + 1);
+    //         // El juego ha acabado
+    //         if (game.getCurrentRound() == game.getTotalRounds()) {
+    //             messagingTemplate.convertAndSend("/topic/gartic/lobby/" + lobbyCode, new GameUpdate("GAMEENDED",
+    //                     game.getSequences().stream().map(MIDISequence::toTransfer).toList()));
+    //             return new GameUpdate("NULL", null);
+    //         }
+    //         // Ponemos que ningun jugador ha enviado su track
+    //         game.getTrackSubmissions().replaceAll((k, v) -> false);
+    //         // Desplazamos las secuencias de cada jugador
+    //         game.setSequenceAssignments(GameUtils.shiftValuesRight(game.getSequenceAssignments()));
+    //         // Notificamos que empieza una nueva ronda y enviamos a cada jugador su nueva
+    //         // secuencia
+    //         for (User p : game.getPlayers()) {
+    //             long playerSequenceId = game.getSequenceAssignments()
+    //                     .get(p.getId());
+    //             MIDISequence seq = midiSequenceRepository.findById(playerSequenceId)
+    //                     .orElseThrow(() -> new IllegalArgumentException("Invalid sequence ID"));
+    //             MIDIInstrument.Transfer instruData = midiInstrumentRepository
+    //                     .findByProgram(game.getRoundInstruments().get(game.getCurrentRound()))
+    //                     .orElseThrow(() -> new IllegalArgumentException("Invalid Program")).toTransfer();
+    //             GameData data = new GameData(game.getCurrentRound(), game.getTotalRounds(), game.getStatus().name(),
+    //                     new RoundData(instruData, seq.toTransfer()));
+    //             GameUpdate up = new GameUpdate("NEWROUND", data);
+    //             messagingTemplate.convertAndSendToUser(p.getUsername(), "/queue/gartic/lobby/" + lobbyCode, up);
+    //         }
+    //         return new GameUpdate("NULL", null);
+    //     }
+    //     return new GameUpdate("TRACKRECEIVED", null);
+    // }
 
     @MessageMapping("/gartic/lobby/{lobbyCode}/chat")
     public void chat(@DestinationVariable String lobbyCode, @Payload ChatMessage msg) {
