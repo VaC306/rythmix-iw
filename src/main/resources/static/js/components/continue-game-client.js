@@ -1,11 +1,5 @@
 "use strict";
 
-// Get variables from the global scope (set in continue.html)
-const isOwner = window.isOwner !== undefined ? window.isOwner : false;
-const lobbyCode = window.lobbyCode || '';
-const username = window.username || 'Unknown';
-const userId = window.userId || null;
-
 const selectors = {
   gameContainer: "#game-container",
   startButton: "#start-button",
@@ -31,28 +25,53 @@ const selectors = {
   numberOfRoundsSelector: "#select-rounds",
 };
 
-let gameData, pianoRoll, availableInstruments = null;
-let pollingInterval = null;
-let lastUpdateTime = Date.now();
+let gameData,
+  pianoRoll,
+  availableInstruments = null,
+  playing = false,
+  ended=false;
 
-// Also expose userId globally for other scripts
-window.userId = userId;
+function subscribeWhenReady(lobbyCode) {
+  const interval = setInterval(() => {
+    if (ws.stompClient && ws.stompClient.connected) {
+      try {
+        ws.stompClient.subscribe("/topic/continue/lobby/" + lobbyCode, (m) => handleMessage(JSON.parse(m.body)));
+        console.log("Hopefully subscribed to topic and queue");
+      } catch (e) {
+        console.log("Error, could not subscribe", e);
+      }
+      clearInterval(interval);
+    }
+  }, 100);
+}
+
+function handleMessage(m) {
+  console.log(m.data);
+  switch (m.type) {
+    case "PLAYERSUPDATED":
+      updatePlayers(m.data);
+      break;
+    case "GAMESTARTED":
+    case "NEWROUND":
+        playing = true;
+      showScreen(selectors.gameScreenTemplate);
+      gameData = m.data;
+      setupGameScreen();
+      break;
+    case "TRACKRECEIVED":
+      showScreen(selectors.trackSentTemplate);
+      break;
+    case "GAMEENDED":
+        ended=true;
+      showScreen(selectors.endScreenTemplate);
+      setupEndScreen(m.data);
+  }
+}
 
 function updatePlayers(list) {
-  console.log("Updating players...", list);
-  const playerListEl = document.querySelector(selectors.playerList);
-  if (!playerListEl) {
-    console.error("Player list element not found!");
-    return;
-  }
-  
-  playerListEl.innerHTML = "";
-  
-  // Update player counters
-  document.querySelectorAll(selectors.playerCounter).forEach((el) => {
-    if (el) el.textContent = list.length;
-  });
-  
+  console.log("Updating players...");
+  document.querySelector(selectors.playerList).innerHTML = "";
+  document.querySelectorAll(selectors.playerCounter).forEach((el) => (el.textContent = list.length));
   const ownerBadge = `<span class="badge bg-warning text-dark">Owner</span>`;
   list.forEach((player) => {
     const html = `
@@ -65,211 +84,53 @@ function updatePlayers(list) {
       ${player.isOwner ? ownerBadge : ""}
     </div>
     `;
-    playerListEl.insertAdjacentHTML("beforeend", html);
+    document.querySelector(selectors.playerList).insertAdjacentHTML("beforeend", html);
   });
 }
 
 function showScreen(selector) {
   console.log(`Showing screen "${selector}"`);
   const gameContainer = document.querySelector(selectors.gameContainer);
-  if (!gameContainer) {
-    console.error("Game container not found!");
-    return;
-  }
-  
-  const template = document.querySelector(selector);
-  if (!template) {
-    console.error(`Template "${selector}" not found!`);
-    return;
-  }
-  
+  const template = document.querySelector(`${selector}`);
   const instance = template.content.cloneNode(true);
   gameContainer.replaceChildren();
   gameContainer.appendChild(instance);
 }
 
-function handleMessage(m) {
-  console.log("Received message:", m);
-  
-  // Handle user-specific messages
-  if (m.userId && m.userId !== userId) {
-    console.log("Skipping message for other user:", m.userId);
-    return;
-  }
-  
-  switch (m.type) {
-    case "PLAYERSUPDATED":
-      updatePlayers(m.data);
-      break;
-    case "GAMESTARTED":
-    case "NEWROUND":
-      showScreen(selectors.gameScreenTemplate);
-      gameData = m.data;
-      setupGameScreen();
-      break;
-    case "TRACKRECEIVED":
-      showScreen(selectors.trackSentTemplate);
-      // Auto-return to waiting room after 3 seconds? Or stay on track-sent
-      setTimeout(() => {
-        // Don't automatically redirect, just stay on track-sent until next round
-        console.log("Track received, waiting for next round...");
-      }, 1000);
-      break;
-    case "GAMEENDED":
-      showScreen(selectors.endScreenTemplate);
-      setupEndScreen(m.data);
-      if (pollingInterval) clearInterval(pollingInterval);
-      break;
-    case "CHAT_MESSAGE":
-      // Chat messages are handled by game-chat.js
-      if (window.displayChatMessage) {
-        window.displayChatMessage(m.data);
-      }
-      break;
-    default:
-      console.log("Unknown message type:", m.type);
-  }
-}
-
-async function startPolling(lobbyCode) {
-  if (!lobbyCode) {
-    console.error("Cannot start polling: no lobby code");
-    return;
-  }
-  
-  console.log("Starting polling for lobby:", lobbyCode);
-  
-  if (pollingInterval) clearInterval(pollingInterval);
-  
-  pollingInterval = setInterval(async () => {
-    try {
-      const response = await fetch(`/continue/api/lobby/${lobbyCode}/updates?lastUpdateTime=${lastUpdateTime}`);
-      if (response.ok) {
-        const updates = await response.json();
-        for (const update of updates) {
-          handleMessage(update);
-          lastUpdateTime = Math.max(lastUpdateTime, update.timestamp);
-        }
-      } else if (response.status === 404) {
-        console.error("Lobby not found");
-        if (pollingInterval) clearInterval(pollingInterval);
-      }
-    } catch (error) {
-      console.error("Polling error:", error);
-    }
-  }, 1000);
-}
-
-async function sendStartRequest() {
+function sendStartRequest() {
   console.log("Sending start request...");
-  
-  const roundsSelect = document.querySelector(selectors.numberOfRoundsSelector);
-  if (!roundsSelect) {
-    console.error("Rounds selector not found");
-    return;
-  }
-  
-  const body = {
-    userId: userId,
-    totalRounds: parseInt(roundsSelect.value),
+  let body = {
+    totalRounds: parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
     roundInstruments: [],
   };
-  
-  for (let i = 0; i < body.totalRounds; i++) {
-    const instrumentSelect = document.querySelector(`#select-instrument-round-${i}`);
-    if (instrumentSelect) {
-      body.roundInstruments.push(parseInt(instrumentSelect.value));
+  for (let i = 0; i < body.totalRounds; i++)
+    body.roundInstruments.push(parseInt(document.querySelector(`#select-instrument-round-${i}`).value));
+  console.log({ method: "POST", "X-CSRF-TOKEN": config.csrf.value, body: body });
+  fetch(`/api/continue/lobby/${lobbyCode}/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    body: JSON.stringify(body),
+  }).then((r) => {
+    if (r.ok) console.log("Start request sent correctly");
+    else {
+      console.log(r.status);
     }
-  }
-  
-  console.log("Start request body:", body);
-  
-  try {
-    const response = await fetch(`/continue/api/lobby/${lobbyCode}/start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body)
-    });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("Failed to start game:", error);
-      showError("Failed to start game: " + error);
-    } else {
-      console.log("Game started successfully");
-    }
-  } catch (error) {
-    console.error("Error starting game:", error);
-    showError("Network error while starting game");
-  }
+  });
 }
 
-async function sendTrack() {
+function sendTrack() {
+    playing = false;
   console.log("Sending created track...");
-  
-  if (!pianoRoll) {
-    console.error("PianoRoll not initialized");
-    return;
-  }
-  
-  const trackData = {
-    userId: userId,
-    track: pianoRoll.getEditableTrack()
-  };
-  
-  try {
-    const response = await fetch(`/continue/api/lobby/${lobbyCode}/tracks/submit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(trackData)
-    });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("Failed to submit track:", error);
-      showError("Failed to submit track: " + error);
-    } else {
-      console.log("Track submitted successfully");
+  fetch(`/api/continue/lobby/${lobbyCode}/track/post`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    body: JSON.stringify(pianoRoll.getEditableTrack()),
+  }).then((r) => {
+    if (r.ok && !playing && !ended) showScreen(selectors.trackSentTemplate);
+    else {
+      console.log(r.status);
     }
-  } catch (error) {
-    console.error("Error submitting track:", error);
-    showError("Network error while submitting track");
-  }
-}
-
-function showError(message) {
-  console.error(message);
-  // Create a toast notification
-  const toastContainer = document.getElementById('toast-container') || createToastContainer();
-  const toastId = 'toast-' + Date.now();
-  const toastHtml = `
-    <div id="${toastId}" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
-      <div class="d-flex">
-        <div class="toast-body">
-          ${message}
-        </div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
-    </div>
-  `;
-  toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-  const toastElement = document.getElementById(toastId);
-  const toast = new bootstrap.Toast(toastElement);
-  toast.show();
-  toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
-}
-
-function createToastContainer() {
-  const container = document.createElement('div');
-  container.id = 'toast-container';
-  container.className = 'position-fixed bottom-0 end-0 p-3';
-  container.style.zIndex = '11';
-  document.body.appendChild(container);
-  return container;
+  });
 }
 
 async function setupPianoRoll(selectors) {
@@ -279,47 +140,24 @@ async function setupPianoRoll(selectors) {
   pianoRoll.createVisualElement(selectors.pianoRollContainer, instrumentData.notes);
   pianoRoll.setFixedTracks(sequence.tracks);
   pianoRoll.bindControls(selectors);
-  const sendButton = document.querySelector(selectors.sendButton);
-  if (sendButton) {
-    sendButton.addEventListener("click", async (e) => {
-      sendTrack();
-    });
-  }
+  document.querySelector(selectors.sendButton).addEventListener("click", async (e) => {
+    sendTrack();
+  });
 }
 
 async function showInstructionsModal(selectors) {
   const instrumentData = gameData.roundData.instrumentData;
-  const modalLabel = document.querySelector(selectors.instructionsModalLabel);
-  const modalBody = document.querySelector(selectors.instructionsModalBody);
-  
-  if (modalLabel) {
-    modalLabel.textContent = `Ronda ${gameData.currentRound + 1} de ${gameData.totalRounds}`;
-  }
-  if (modalBody) {
-    modalBody.textContent = `Crea una pista de ${instrumentData.instrumentName} para la canción!`;
-  }
-  
-  const modalElement = document.querySelector(selectors.instructionsModal);
-  if (modalElement) {
-    const bsModal = new bootstrap.Modal(modalElement);
-    bsModal.show();
-  }
+  document.querySelector(selectors.instructionsModalLabel).textContent =
+    `Ronda ${gameData.currentRound + 1} de ${gameData.totalRounds}`;
+  document.querySelector(selectors.instructionsModalBody).textContent =
+    `Crea una pista de ${instrumentData.instrumentName} para la canción!`;
+  const bsModal = new bootstrap.Modal(document.querySelector(selectors.instructionsModal));
+  bsModal.show();
 }
 
 function setupWaitingRoom() {
-  console.log("Setting up waiting room, isOwner:", isOwner);
-  
-  // Initialize player list from server data
-  if (window.initialPlayers && window.initialPlayers.length > 0) {
-    updatePlayers(window.initialPlayers);
-  }
-  
   if (isOwner) {
-    const startButton = document.querySelector(selectors.startButton);
-    if (startButton) {
-      startButton.onclick = sendStartRequest;
-    }
-    
+    document.querySelector(selectors.startButton).onclick = sendStartRequest;
     if (availableInstruments == null) {
       fetch("/api/game/instrument/getall").then((r) => {
         if (r.ok)
@@ -328,63 +166,73 @@ function setupWaitingRoom() {
             createInstrumentSelects();
           });
       });
-    } else {
+    } else createInstrumentSelects();
+    document.querySelector(selectors.numberOfRoundsSelector).addEventListener("change", () => {
       createInstrumentSelects();
-    }
-    
-    const roundsSelect = document.querySelector(selectors.numberOfRoundsSelector);
-    if (roundsSelect) {
-      roundsSelect.addEventListener("change", () => {
-        createInstrumentSelects();
-      });
-    }
-  }
-  
-  // Start polling for updates
-  if (lobbyCode) {
-    startPolling(lobbyCode);
+    });
   }
 }
 
 function createInstrumentSelects() {
-  const roundsSelect = document.querySelector(selectors.numberOfRoundsSelector);
-  if (!roundsSelect) return;
-  
-  const container = document.querySelector(selectors.instrumentSelectContainer);
-  if (!container) return;
-  
-  const numRounds = parseInt(roundsSelect.value);
-  console.log("Creating instrument selects for", numRounds, "rounds");
-  container.innerHTML = "";
-  
-  for (let i = 0; i < numRounds; i++) {
-    container.insertAdjacentHTML(
+  console.log("dasfkjnl", parseInt(document.querySelector(selectors.numberOfRoundsSelector).value));
+  document.querySelector(selectors.instrumentSelectContainer).innerHTML = "";
+  for (let i = 0; i < parseInt(document.querySelector(selectors.numberOfRoundsSelector).value); i++) {
+    document.querySelector(selectors.instrumentSelectContainer).insertAdjacentHTML(
       "beforeend",
       `
       <div class="mb-3 form-floating">
         <select id="select-instrument-round-${i}" class="form-select">
-          ${availableInstruments ? availableInstruments.map(
-            (ins, idx) => `
+          ${"".concat(
+            ...availableInstruments.map(
+              (ins, idx) =>
+                `
             <option value=${ins.program} ${idx > 0 && ins.program != 128 && idx == i - 1 ? "selected" : ""} ${i == 0 && ins.program == 128 ? "selected" : ""}>
               ${ins.instrumentName}
             </option>
-            `).join('') : ''}
+            `,
+            ),
+          )}
         </select>
         <label for="select-instrument-round-${i}" class="form-label">Ronda ${i + 1}</label>
       </div>
-      `
+      `,
     );
   }
 }
 
-function setupGameScreen() {
+async function getRoundSequence(retries = 5) {
+  let delay = 500;
+  for (let i = 0; i < retries; i++) {
+    const r = await fetch(`/api/continue/lobby/${lobbyCode}/sequence/get?currentRound=${gameData.currentRound}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+    if (r.ok) return r.json();
+    if (r.status != 409) return null;
+    console.log(`Retrying in ${delay}ms`)
+    await new Promise((res) => setTimeout(res, delay));
+    delay *= 2;
+  }
+}
+
+async function getRoundInstrument() {
+  return fetch(`/api/game/instrument/get/${gameData.instrument}`).then((r) => {
+    if (r.ok) return r.json();
+    else return null;
+  });
+}
+
+async function setupGameScreen() {
+  gameData.roundData = {};
+  gameData.roundData.instrumentData = await getRoundInstrument();
+  gameData.roundData.sequence = await getRoundSequence();
   setupPianoRoll(selectors);
   showInstructionsModal(selectors);
-  console.log("Game data:", gameData.roundData);
+  console.log(gameData.roundData);
 }
 
 function createCardHTML(params) {
-  return `
+  const html = `
     <div class="card mb-3">
       <div class="card-body row align-items-center py-5">
         <div class="col col-8">
@@ -392,36 +240,33 @@ function createCardHTML(params) {
         </div>
         <div class="col col-4">                        
           <div class="btn-group" role="group">
-            <button id="${params.playButtonId}" type="button" class="btn btn-primary" title="Play">
+            <button id="${params.playButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.play}">
               <i class="bi bi-play-fill"></i>
             </button>
-            <button id="${params.pauseButtonId}" type="button" class="btn btn-primary" title="Pause">
+            <button id="${params.pauseButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.pause}">
               <i class="bi bi-pause-fill"></i>
             </button>
-            <button id="${params.stopButtonId}" type="button" class="btn btn-primary" title="Stop">
+            <button id="${params.stopButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.stop}">
               <i class="bi bi-stop-fill"></i>
             </button>
           </div>
         </div>
       </div>
     </div>
-  `;
+    `;
+  return html;
 }
 
 function setupCards(sequences) {
-  const container = document.querySelector(selectors.endScreenCardsContainer);
-  if (!container) return;
-  
-  container.innerHTML = "";
   for (let i in sequences) {
-    container.insertAdjacentHTML(
+    document.querySelector(selectors.endScreenCardsContainer).insertAdjacentHTML(
       "beforeend",
       createCardHTML({
         progressBarId: `progressBarEnd${i}`,
         playButtonId: `playButtonEnd${i}`,
         pauseButtonId: `pauseButtonEnd${i}`,
         stopButtonId: `stopButtonEnd${i}`,
-      })
+      }),
     );
     let pr = new PianoRoll({});
     pr.setFixedTracks(sequences[i].tracks);
@@ -434,20 +279,29 @@ function setupCards(sequences) {
   }
 }
 
-function setupEndScreen(sequences) {
-  console.log("Setting up end screen with sequences:", sequences);
+async function getAllSequences(retries = 5) {
+  let delay = 500;
+  for (let i = 0; i < retries; i++) {
+    const r = await fetch(`/api/continue/lobby/${lobbyCode}/sequence/getall`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+    if (r.ok) return r.json();
+    if (r.status != 409) return null;
+    console.log(`Retrying in ${delay}ms`)
+    await new Promise((res) => setTimeout(res, delay));
+    delay *= 2;
+  }
+}
+
+async function setupEndScreen() {
+    const sequences = await getAllSequences()
+  console.log(sequences);
   setupCards(sequences);
 }
 
-// Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", (e) => {
-  console.log("DOM loaded, lobbyCode:", lobbyCode, "isOwner:", isOwner, "userId:", userId);
-  
-  if (!lobbyCode) {
-    console.error("No lobby code found!");
-    return;
-  }
-  
+  subscribeWhenReady(lobbyCode);
   showScreen(selectors.waitingRoomTemplate);
   setupWaitingRoom();
 });
