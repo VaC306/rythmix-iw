@@ -81,6 +81,9 @@ function handleMessage(m) {
       showScreen(selectors.votingScreenTemplate);
       setupVotingScreen(m.data);
       break;
+    case "UPDATEVOTES":
+      updateVotingCounts(m.data.voteCounts);
+      break;
   }
 }
 
@@ -143,8 +146,8 @@ function sendTrack() {
     headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
     body: JSON.stringify(pianoRoll.getEditableTrack()),
   }).then((r) => {
-    if (r.ok && playerCount > 1) showScreen(selectors.trackSentTemplate);
-    else if (r.ok) console.log("Track submitted");
+    if (r.ok && !votingStarted) showScreen(selectors.trackSentTemplate);
+    else if (r.ok) console.log("Track submitted, voting already started");
     else console.log(r.status);
   });
 }
@@ -402,6 +405,15 @@ async function setupVotingScreen(data) {
       sendVote(selectedVoteSequenceId);
     }
   });
+}
+
+function updateVotingCounts(voteCounts) {
+  for (const [sequenceId, count] of Object.entries(voteCounts)) {
+    const card = document.querySelector(`.card[data-sequence-id="${sequenceId}"]`);
+    if (!card) continue;
+    const voteSpan = card.querySelector('.vote-count span');
+    if (voteSpan) voteSpan.textContent = count;
+  }
 }
 
 function sendVote(sequenceId) {

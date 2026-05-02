@@ -122,58 +122,6 @@ public class ContinueApiController {
                 .toTransfer();
     }
 
-    /*@PostMapping("/lobby/{lobbyCode}/track/post")
-    @Transactional
-    public Map<String, String> receiveTrack(HttpSession session, @PathVariable String lobbyCode,
-            @RequestBody MIDITrack.Transfer submission) {
-        // Verificar sesion de usuario
-        User u = (User) session.getAttribute("u");
-        if (u == null)
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not logged in");
-
-        // Obtenemos la partida
-        ContinueGame game = (ContinueGame) midiGameRepository.findByLobbyCode(lobbyCode)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lobby not found"));
-
-        if (!game.getPlayers().stream().anyMatch(p -> p.getId() == u.getId()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not in lobby");
-
-        if (game.getTrackSubmissions().get(u.getId()) == true)
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Track already submitted");
-
-        // Anadimos el nuevo track a la secuencia
-        long sequenceId = game.getSequenceAssignments()
-                .get(u.getId());
-        MIDISequence sequence = midiSequenceRepository.findById(sequenceId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sequence not found"));
-        sequence.getTracks().add(new MIDITrack(submission, sequence));
-        game.getTrackSubmissions().put(u.getId(), true);
-        midiSequenceRepository.save(sequence);
-        midiGameRepository.save(game);
-        if (!game.getTrackSubmissions().containsValue(false)) {
-            // Todos los jugadores han acabado
-            // Actualizamos la ronda
-            game.setCurrentRound(game.getCurrentRound() + 1);
-            // El juego ha acabado
-            if (game.getCurrentRound() == game.getTotalRounds()) {
-                game.setStatus(ContinueGameStatus.FINISHED);
-                midiGameRepository.save(game);
-                messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode, new GameUpdate("GAMEENDED", null));
-                return Map.of("result", "ok");
-            }
-            // Ponemos que ningun jugador ha enviado su track
-            game.getTrackSubmissions().replaceAll((k, v) -> false);
-            // Desplazamos las secuencias de cada jugador
-            game.setSequenceAssignments(GameUtils.shiftValuesRight(game.getSequenceAssignments()));
-            // Notificamos que empieza una nueva ronda
-            // secuencia
-            messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode,
-                    new GameUpdate("NEWROUND",
-                            Map.of("currentRound", game.getCurrentRound(), "totalRounds", game.getTotalRounds(),
-                                    "instrument", game.getRoundInstruments().get(game.getCurrentRound()))));
-        }
-        return Map.of("result", "ok");
-    }*/
     @PostMapping("/lobby/{lobbyCode}/vote")
     @Transactional
     public Map<String, String> receiveVote(HttpSession session, @PathVariable String lobbyCode,
@@ -200,6 +148,13 @@ public class ContinueApiController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sequence owner not found"));
 
         game.get_voterToVoted().put(u.getId(), votedPlayerId);
+        game.getVoteCounts().put(votedSequenceId, game.getVoteCounts().getOrDefault(votedSequenceId, 0) + 1);
+        messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode,
+                        new GameUpdate("UPDATEVOTES",
+                                Map.of("sequences", game.getSequences().stream()
+                                        .filter(s -> s.getId() != game.getFinalSequenceId())
+                                        .map(MIDISequence::toTransfer).toList(),
+                                        "voteCounts", game.getVoteCounts())));
         midiGameRepository.save(game);
 
         if (game.get_voterToVoted().size() == game.getPlayers().size()) {
@@ -247,6 +202,7 @@ public class ContinueApiController {
 
             // Reset votes for next round
             game.get_voterToVoted().clear();
+            game.getVoteCounts().clear();
 
             // Increment round
             game.setCurrentRound(game.getCurrentRound() + 1);
@@ -317,12 +273,27 @@ public class ContinueApiController {
             if (!game.getTrackSubmissions().containsValue(false)) {
                 // Todos los jugadores han acabado - entrar en votación
                 game.getTrackSubmissions().replaceAll((k, v) -> false);
-                messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode,
-                        new GameUpdate("VOTINGSTARTED",
-                                Map.of("sequences", game.getSequences().stream()
-                                        .filter(s -> s.getId() != game.getFinalSequenceId())
-                                        .map(MIDISequence::toTransfer).toList(),
-                                        "voteCounts", game.getVoteCounts())));
+                // Initialize vote counts for all sequences (except final track)
+                game.getVoteCounts().clear();
+                for (MIDISequence seq : game.getSequences()) {
+                    if (seq.getId() != game.getFinalSequenceId()) {
+                        game.getVoteCounts().put(seq.getId(), 0);
+                    }
+                }
+                midiGameRepository.save(game);
+                final String code = lobbyCode;
+                final SimpMessagingTemplate msg = messagingTemplate;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        msg.convertAndSend("/topic/continue/lobby/" + code,
+                                new GameUpdate("VOTINGSTARTED",
+                                        Map.of("sequences", game.getSequences().stream()
+                                                .filter(s -> s.getId() != game.getFinalSequenceId())
+                                                .map(MIDISequence::toTransfer).toList(),
+                                                "voteCounts", game.getVoteCounts())));
+                    }
+                });
             }
             return Map.of("result", "ok");
         }

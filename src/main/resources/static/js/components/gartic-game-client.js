@@ -28,7 +28,7 @@ const selectors = {
 let gameData,
   pianoRoll,
   availableInstruments = null,
-  playing = false,
+  waitingForNewRound = false,
   ended=false;
 
 function subscribeWhenReady(lobbyCode) {
@@ -53,7 +53,7 @@ function handleMessage(m) {
       break;
     case "GAMESTARTED":
     case "NEWROUND":
-        playing = true;
+        waitingForNewRound = false;
       showScreen(selectors.gameScreenTemplate);
       gameData = m.data;
       setupGameScreen();
@@ -142,14 +142,14 @@ function sendStartRequest() {
 // }
 
 function sendTrack() {
-    playing = false;
+    waitingForNewRound = true;
   console.log("Sending created track...");
   fetch(`/api/gartic/lobby/${lobbyCode}/track/post`, {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
     body: JSON.stringify(pianoRoll.getEditableTrack()),
   }).then((r) => {
-    if (r.ok && !playing && !ended) showScreen(selectors.trackSentTemplate);
+    if (r.ok && waitingForNewRound && !ended) showScreen(selectors.trackSentTemplate);
     else {
       console.log(r.status);
     }
@@ -246,12 +246,16 @@ async function getRoundInstrument() {
 }
 
 async function setupGameScreen() {
-  gameData.roundData = {};
-  gameData.roundData.instrumentData = await getRoundInstrument();
-  gameData.roundData.sequence = await getRoundSequence();
-  setupPianoRoll(selectors);
-  showInstructionsModal(selectors);
-  console.log(gameData.roundData);
+  try {
+    gameData.roundData = {};
+    gameData.roundData.instrumentData = await getRoundInstrument();
+    gameData.roundData.sequence = await getRoundSequence();
+    setupPianoRoll(selectors);
+    showInstructionsModal(selectors);
+    console.log(gameData.roundData);
+  } catch (e) {
+    console.error("Error setting up game screen:", e);
+  }
 }
 
 function createCardHTML(params) {
