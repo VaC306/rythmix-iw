@@ -34,9 +34,11 @@ import es.ucm.fdi.iw.model.MIDISequence;
 import es.ucm.fdi.iw.model.MIDITrack;
 import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.model.ContinueGame.ContinueGameStatus;
+import es.ucm.fdi.iw.model.Topic;
 import es.ucm.fdi.iw.repository.MIDIGameRepository;
 import es.ucm.fdi.iw.repository.MIDIInstrumentRepository;
 import es.ucm.fdi.iw.repository.MIDISequenceRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 
@@ -52,6 +54,9 @@ public class ContinueGameController {
 
     @Autowired
     private AuditHelper auditHelper;
+
+    @Autowired
+    private EntityManager entityManager;
 
     private final MIDIGameRepository midiGameRepository;
     private final MIDISequenceRepository midiSequenceRepository;
@@ -113,6 +118,12 @@ public class ContinueGameController {
         List<Integer> roundInstruments = Arrays.asList(128, 34, 1, 56);
         game.setRoundInstruments(roundInstruments);
         midiGameRepository.save(game);
+
+        Topic lobbyTopic = new Topic();
+        lobbyTopic.setKey("lobby-" + lobbyCode);
+        lobbyTopic.setName("Lobby " + lobbyCode);
+        lobbyTopic.getMembers().add(u);
+        entityManager.persist(lobbyTopic);
 
         session.setAttribute("currentGame", game);
         log.info("Created lobby {} for user {}", lobbyCode, u.getUsername());
@@ -188,16 +199,16 @@ public class ContinueGameController {
         ContinueGame game = (ContinueGame) optGame.get();
         log.info("User {} joining lobby {}", u.getUsername(), lobbyCode);
         game.addPlayer(u);
+
+        Topic lobbyTopic = entityManager.createNamedQuery("Topic.byKey", Topic.class)
+                .setParameter("key", "lobby-" + lobbyCode).getSingleResult();
+        lobbyTopic.getMembers().add(u);
+
         GameUpdate up = new GameUpdate("PLAYERSUPDATED",
                 game.getPlayers().stream()
                         .map((p) -> new PlayerInfo(p.getId(), p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode, up);
         return "redirect:/continue/lobby/" + lobbyCode;
-    }
-
-    @MessageMapping("/continue/lobby/{lobbyCode}/chat")
-    public void chat(@DestinationVariable String lobbyCode, @Payload ChatMessage msg) {
-        messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode + "/chat", msg);
     }
 
     public record GameUpdate(String type, Object data) {}
@@ -207,6 +218,5 @@ public class ContinueGameController {
     public record RoundData(MIDIInstrument.Transfer instrumentData, MIDISequence.Transfer sequence) {}
     public record GameData(int currentRound, int totalRounds, String status, RoundData roundData) {}
     public record PlayerInfo(Long id, String username, boolean isOwner) {}
-    public record ChatMessage(String username, String text) {}
 
 }

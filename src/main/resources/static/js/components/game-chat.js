@@ -5,41 +5,20 @@ function waitForStomp(cb) {
 }
 
 waitForStomp(() => {
-    const currentUrl = window.location.href;
-    if(currentUrl.includes("continue"))
-    {
-            ws.stompClient.subscribe(`/topic/continue/lobby/${lobbyCode}/chat`, (msg) => {
-            const { username: from, text } = JSON.parse(msg.body);
-            const box = document.getElementById('chat-messages');
-            box.insertAdjacentHTML('beforeend',
-                `<div class="d-flex gap-2 mb-1">
-                    <span class="fw-bold text-primary">${from}</span>
-                    <span>${text}</span>
-                </div>`
-            );
-            box.scrollTop = box.scrollHeight;
-            const badge = document.querySelector("#chat-button-badge")
-            badge.textContent = parseInt(badge.textContent) + 1
-            badge.classList.remove("visually-hidden")
-        });
-    }
-    else
-    {
-            ws.stompClient.subscribe(`/topic/gartic/lobby/${lobbyCode}/chat`, (msg) => {
-            const { username: from, text } = JSON.parse(msg.body);
-            const box = document.getElementById('chat-messages');
-            box.insertAdjacentHTML('beforeend',
-                `<div class="d-flex gap-2 mb-1">
-                    <span class="fw-bold text-primary">${from}</span>
-                    <span>${text}</span>
-                </div>`
-            );
-            box.scrollTop = box.scrollHeight;
-            const badge = document.querySelector("#chat-button-badge")
-            badge.textContent = parseInt(badge.textContent) + 1
-            badge.classList.remove("visually-hidden")
-        });
-    }
+    ws.stompClient.subscribe(`/topic/lobby-${lobbyCode}`, (msg) => {
+        const { from, text, sent, id } = JSON.parse(msg.body);
+        const box = document.getElementById('chat-messages');
+        box.insertAdjacentHTML('beforeend',
+            `<div class="d-flex gap-2 mb-1">
+                <span class="fw-bold text-primary">${from}</span>
+                <span>${text}</span>
+            </div>`
+        );
+        box.scrollTop = box.scrollHeight;
+        const badge = document.querySelector("#chat-button-badge")
+        badge.textContent = parseInt(badge.textContent) + 1
+        badge.classList.remove("visually-hidden")
+    });
 
     document.getElementById('chat-send').addEventListener('click', sendChat);
     document.getElementById('chat-input').addEventListener('keydown', e => e.key === 'Enter' && sendChat());
@@ -52,14 +31,13 @@ waitForStomp(() => {
 function sendChat() {
     const input = document.getElementById('chat-input');
     if (!input.value.trim()) return;
-    const currentUrl = window.location.href;
-    if(currentUrl.includes("continue"))
-    {
-        ws.stompClient.send(`/continue/lobby/${lobbyCode}/chat`, {}, JSON.stringify({ username, text: input.value.trim() }));    
-    }
-    else
-    {
-        ws.stompClient.send(`/gartic/lobby/${lobbyCode}/chat`, {}, JSON.stringify({ username, text: input.value.trim() }));  
-    }
+    fetch(`/api/topic/lobby-${lobbyCode}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': window.config?.csrf?.value || ''
+        },
+        body: JSON.stringify({ message: input.value.trim() })
+    });
     input.value = '';
 }
