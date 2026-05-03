@@ -19,70 +19,29 @@
 
             <!-- Título la vista -->
             <h1 class="text-center mb-4" th:text="#{favorites.title}"></h1>
+            
+            <!-- Mensaje explicativo en caso de que no se haya inciado sesión -->
+            <div id="login-message" class="alert alert-warning d-none">
+                Debes de iniciar sesión primero para ver las canciones que te gustan
+            </div>
+            
+            <!-- Mensaje explicativo en caso de que no hayan canciones guardadas -->
+            <div id="empty-songs" class="text-center text-muted d-none">
+                No tienes todavia canciones guardadas como favortias. Juega juegos y guarda las que te gusten !!!
+            </div>
 
-            <!-- Lista de las canciones favoritas -->
-            <div class="card mb-2 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col"></div>
-                        <div class="col text-center">
-                            <strong th:text="#{favorites.song1}"></strong>
-                        </div>
-                        <div class="col d-flex justify-content-end gap-2">
-                            <button class="btn btn-outline-info" th:text="#{favorites.prev}"></button>
-                            <button class="btn btn-primary" th:text="#{favorites.play}"></button>
-                            <button class="btn btn-outline-info" th:text="#{favorites.next}"></button>
-                        </div>
-                    </div>
-                </div>
-             </div>
-
-             <div class="card mb-2 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col"></div>
-                        <div class="col text-center">
-                            <strong th:text="#{favorites.song2}"></strong>
-                        </div>
-                        <div class="col d-flex justify-content-end gap-2">
-                            <button class="btn btn-outline-info" th:text="#{favorites.prev}"></button>
-                            <button class="btn btn-primary" th:text="#{favorites.play}"></button>
-                            <button class="btn btn-outline-info" th:text="#{favorites.next}"></button>
-                        </div>
-                    </div>
-                </div>
-             </div>
-
-             <div class="card mb-2 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col"></div>
-                        <div class="col text-center">
-                            <strong th:text="#{favorites.song3}"></strong>
-                        </div>
-                        <div class="col d-flex justify-content-end gap-2">
-                            <button class="btn btn-outline-info" th:text="#{favorites.prev}"></button>
-                            <button class="btn btn-primary" th:text="#{favorites.play}"></button>
-                            <button class="btn btn-outline-info" th:text="#{favorites.next}"></button>
-                        </div>
-                    </div>
-                </div>
-             </div>
-
-             <div class="card mb-2 shadow-sm">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col text-center">
-                            <strong th:text="#{favorites.more}"></strong>
-                        </div>
-                    </div>
-                </div>
-             </div>
+            <!-- Motramos los mensajes -->
+            <div id="favorite-songs-container"></div>
 
         </div>
     </main>
 
     <th:block th:replace="~{fragments/footer.html :: footer}" />
-</body>
 
+<script th:src="@{/js/components/gartic-game-client.js}" defer></script>    
+<script th:src="@{/js/components/piano-roll.js}" defer></script>
+<script th:src="@{/js/abcjs-basic-min.js}" defer></script>
+<script th:src="@{/js/components/favorite-songs.js}" defer></script>
+</body>
 </html>
+
