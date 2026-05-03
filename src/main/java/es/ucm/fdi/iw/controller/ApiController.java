@@ -2,17 +2,15 @@ package es.ucm.fdi.iw.controller;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.ui.Model;
@@ -24,20 +22,22 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import es.ucm.fdi.iw.model.Topic;
+import es.ucm.fdi.iw.model.FavoriteSong;
 import es.ucm.fdi.iw.model.GarticGame;
-import es.ucm.fdi.iw.model.MIDIGame;
 import es.ucm.fdi.iw.model.MIDIInstrument;
 import es.ucm.fdi.iw.model.MIDISequence;
 import es.ucm.fdi.iw.model.MIDITrack;
 import es.ucm.fdi.iw.model.Message;
 import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.model.User.Role;
+import es.ucm.fdi.iw.repository.FavoritesSongsRepository;
 import es.ucm.fdi.iw.repository.MIDIGameRepository;
 import es.ucm.fdi.iw.repository.MIDIInstrumentRepository;
 import es.ucm.fdi.iw.repository.MIDISequenceRepository;
@@ -50,7 +50,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
-import org.springframework.web.bind.annotation.RequestParam;
 
 
 /**
@@ -72,11 +71,13 @@ public class ApiController {
   private final MIDISequenceRepository midiSequenceRepository;
   private final MIDIGameRepository midiGameRepository;
   private final MIDIInstrumentRepository midiInstrumentRepository;
+  private final FavoritesSongsRepository favoritesSongsRepository;
 
-  public ApiController(MIDISequenceRepository midiSequenceRepository, MIDIGameRepository midiGameRepository, MIDIInstrumentRepository midiInstrumentRepository) {
+  public ApiController(MIDISequenceRepository midiSequenceRepository, MIDIGameRepository midiGameRepository, MIDIInstrumentRepository midiInstrumentRepository, FavoritesSongsRepository favoritesSongsRepository) {
     this.midiSequenceRepository = midiSequenceRepository;
     this.midiGameRepository = midiGameRepository;
     this.midiInstrumentRepository = midiInstrumentRepository;
+    this.favoritesSongsRepository = favoritesSongsRepository;
   }
 
   private static final Logger log = LogManager.getLogger(ApiController.class);
@@ -269,6 +270,37 @@ public class ApiController {
   public List<MIDIInstrument.Transfer> getAvailableInstruments() {
       List<MIDIInstrument> a =  midiInstrumentRepository.findAll();
       return a.stream().map(MIDIInstrument::toTransfer).toList();
+  }
+
+  @PostMapping("/favSong/{midiSequenceId}")
+  @Transactional
+  public Map<String,Object> saveFavoriteSong(@PathVariable long midiSequenceId, HttpSession session){
+      User u = (User) session.getAttribute("u");
+      if (u == null)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
+
+      MIDISequence midiSequence = midiSequenceRepository.findById(midiSequenceId).orElseThrow(() -> new IllegalArgumentException("Invalid MidiSquence ID"));
+      if (favoritesSongsRepository.existsByUserAndMidiSequence(u, midiSequence)){
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Song aleardy marked as favorite");
+      }
+
+      FavoriteSong favoriteSong = new FavoriteSong();
+      favoriteSong.setUser(u);
+      favoriteSong.setMidiSequence(midiSequence);
+      favoritesSongsRepository.save(favoriteSong);
+
+      return Map.of("result", "song marked as favorite");
+  }
+
+  @GetMapping("/favSong")
+  @Transactional
+  public List<MIDISequence.Transfer> getFavoriteSongs(HttpSession session){
+      User u = (User) session.getAttribute("u");
+      if (u == null)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
+
+      List<MIDISequence.Transfer> favoriteSongs = favoritesSongsRepository.findByUser(u).stream().map(FavoriteSong::toMidiSequenceTransfer).toList();
+      return favoriteSongs;
   }
   
 }

@@ -276,6 +276,10 @@ function createCardHTML(params) {
             <button id="${params.stopButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.stop}">
               <i class="bi bi-stop-fill"></i>
             </button>
+            <button id="${params.saveButtonId}" type="button" class="btn btn-outline-success"
+              onclick="saveFavoriteSong(${params.midiSequenceId}, this)">
+              <i class="bi bi-heart"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -293,6 +297,8 @@ function setupCards(sequences) {
         playButtonId: `playButtonEnd${i}`,
         pauseButtonId: `pauseButtonEnd${i}`,
         stopButtonId: `stopButtonEnd${i}`,
+        saveButtonId: `saveButtonEnd${i}`,      
+        midiSequenceId: sequences[i].id
       }),
     );
     let pr = new PianoRoll({});
@@ -318,6 +324,15 @@ async function getAllSequences(retries = 5) {
     console.log(`Retrying in ${delay}ms`)
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
+  }
+}
+
+async function saveFavoriteSong(midiSequenceId, button) {
+  const r = await fetch(`/api/favSong/${midiSequenceId}`,{method: 'POST'});
+  if (r.ok) {
+    button.classList.remove('btn-outline-success');
+    button.classList.add('btn-success');
+    button.disabled = true;
   }
 }
 
