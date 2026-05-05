@@ -25,10 +25,9 @@ const selectors = {
   numberOfRoundsSelector: "#select-rounds",
 };
 
-let gameData,
-  pianoRoll,
+let pianoRoll,
   availableInstruments = null,
-  playing = false,
+  waitingForNewRound = false,
   ended = false;
 
 function subscribeWhenReady(lobbyCode) {
@@ -53,7 +52,7 @@ function handleMessage(m) {
       break;
     case "GAMESTARTED":
     case "NEWROUND":
-      playing = true;
+      waitingForNewRound = false;
       showScreen(selectors.gameScreenTemplate);
       gameData = m.data;
       setupGameScreen();
@@ -140,7 +139,7 @@ function sendStartRequest() {
 // }
 
 function sendTrack() {
-  playing = false;
+  waitingForNewRound = true;
   console.log("Sending created track...");
   fetch(`/api/gartic/lobby/${lobbyCode}/track/post`, {
     method: "POST",
@@ -295,8 +294,8 @@ function setupCards(sequences) {
         playButtonId: `playButtonEnd${i}`,
         pauseButtonId: `pauseButtonEnd${i}`,
         stopButtonId: `stopButtonEnd${i}`,
-        saveButtonId: `saveButtonEnd${i}`,      
-        midiSequenceId: sequences[i].id
+        saveButtonId: `saveButtonEnd${i}`,
+        midiSequenceId: sequences[i].id,
       }),
     );
     let pr = new PianoRoll({});
@@ -326,10 +325,10 @@ async function getAllSequences(retries = 5) {
 }
 
 async function saveFavoriteSong(midiSequenceId, button) {
-  const r = await fetch(`/api/favSong/${midiSequenceId}`,{method: 'POST'});
+  const r = await fetch(`/api/favSong/${midiSequenceId}`, { method: "POST" });
   if (r.ok) {
-    button.classList.remove('btn-outline-success');
-    button.classList.add('btn-success');
+    button.classList.remove("btn-outline-success");
+    button.classList.add("btn-success");
     button.disabled = true;
   }
 }
@@ -350,9 +349,13 @@ document.addEventListener("DOMContentLoaded", (e) => {
     showScreen(selectors.endScreenTemplate);
     setupEndScreen();
   } else if (initialGameStatus == "PLAYING") {
-    if (initialTrackSent) {
-      playing = true;
+    if (!initialTrackSent) {
+      waitingForNewRound = false;
       showScreen(selectors.gameScreenTemplate);
-    } else showScreen(selectors.trackSentTemplate);
+      setupGameScreen();
+    } else {
+      waitingForNewRound = true;
+      showScreen(selectors.trackSentTemplate);
+    }
   }
 });

@@ -160,6 +160,7 @@ public class GarticController {
         model.addAttribute("isAdmin", u.hasRole(User.Role.ADMIN));
         model.addAttribute("currentRound", game.getCurrentRound());
         model.addAttribute("totalRounds", game.getTotalRounds());
+        model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
         model.addAttribute("gameStatus", game.getStatus());
         model.addAttribute("playerList", game.getPlayers().stream().map((p)->new PlayerInfo(p.getId(),p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         log.info("Lobby {} has {} players", lobbyCode, game.getPlayers().size());
@@ -189,6 +190,12 @@ public class GarticController {
             return "lobby";
         }
         GarticGame game = (GarticGame) optGame.get();
+
+        if(game.getPlayers().stream().anyMatch(p->p.getId() == u.getId())){
+            // El jugador ya pertenece al lobby
+            return "redirect:/gartic/lobby/" + lobbyCode;
+        }
+
         log.info("User {} joining lobby {}", u.getUsername(), lobbyCode);
         game.addPlayer(u);
 
@@ -200,7 +207,7 @@ public class GarticController {
                 game.getPlayers().stream()
                         .map((p) -> new PlayerInfo(p.getId(), p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         messagingTemplate.convertAndSend("/topic/gartic/lobby/" + lobbyCode, up);
-        return "redirect:gartic/lobby/" + lobbyCode;
+        return "redirect:/gartic/lobby/" + lobbyCode;
     }
 
     public record GameUpdate(String type, Object data) {}
