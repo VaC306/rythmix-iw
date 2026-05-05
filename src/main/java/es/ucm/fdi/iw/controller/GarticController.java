@@ -160,7 +160,8 @@ public class GarticController {
         model.addAttribute("isAdmin", u.hasRole(User.Role.ADMIN));
         model.addAttribute("currentRound", game.getCurrentRound());
         model.addAttribute("totalRounds", game.getTotalRounds());
-        model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
+        if(game.getStatus() != GarticGameStatus.FINISHED)
+            model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
         model.addAttribute("gameStatus", game.getStatus());
         model.addAttribute("playerList", game.getPlayers().stream().map((p)->new PlayerInfo(p.getId(),p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         log.info("Lobby {} has {} players", lobbyCode, game.getPlayers().size());
