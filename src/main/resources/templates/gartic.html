@@ -70,6 +70,8 @@
     const isOwner = "[[${isOwner}]]"=="true"
     const lobbyCode = "[[${lobbyCode}?:'']]"
     const username  = "[[${u?.username}?:'Unknown']]"
+    const initialGameStatus = "[[${gameStatus}?:'WAITING']]"
+    const initialTrackSent = ("[[${trackSent}]]" != false)
 </script>
 <script th:src="@{/js/components/gartic-game-client.js}" src="/js/components/gartic-game-client.js" defer></script>
 <script th:src="@{/js/components/piano-roll.js}" src="/js/components/piano-roll.js" defer></script>

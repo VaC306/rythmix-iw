@@ -29,7 +29,7 @@ let gameData,
   pianoRoll,
   availableInstruments = null,
   playing = false,
-  ended=false;
+  ended = false;
 
 function subscribeWhenReady(lobbyCode) {
   const interval = setInterval(() => {
@@ -53,7 +53,7 @@ function handleMessage(m) {
       break;
     case "GAMESTARTED":
     case "NEWROUND":
-        playing = true;
+      playing = true;
       showScreen(selectors.gameScreenTemplate);
       gameData = m.data;
       setupGameScreen();
@@ -62,9 +62,9 @@ function handleMessage(m) {
       showScreen(selectors.trackSentTemplate);
       break;
     case "GAMEENDED":
-        ended=true;
+      ended = true;
       showScreen(selectors.endScreenTemplate);
-      setupEndScreen(m.data);
+      setupEndScreen();
   }
 }
 
@@ -130,8 +130,6 @@ function sendStartRequest() {
   });
 }
 
-
-
 // function sendTrack() {
 //   console.log("Sending created track...");
 //   ws.stompClient.send(
@@ -142,7 +140,7 @@ function sendStartRequest() {
 // }
 
 function sendTrack() {
-    playing = false;
+  playing = false;
   console.log("Sending created track...");
   fetch(`/api/gartic/lobby/${lobbyCode}/track/post`, {
     method: "POST",
@@ -232,7 +230,7 @@ async function getRoundSequence(retries = 5) {
     });
     if (r.ok) return r.json();
     if (r.status != 409) return null;
-    console.log(`Retrying in ${delay}ms`)
+    console.log(`Retrying in ${delay}ms`);
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
   }
@@ -311,20 +309,31 @@ async function getAllSequences(retries = 5) {
     });
     if (r.ok) return r.json();
     if (r.status != 409) return null;
-    console.log(`Retrying in ${delay}ms`)
+    console.log(`Retrying in ${delay}ms`);
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
   }
 }
 
 async function setupEndScreen() {
-    const sequences = await getAllSequences()
+  const sequences = await getAllSequences();
   console.log(sequences);
   setupCards(sequences);
 }
 
 document.addEventListener("DOMContentLoaded", (e) => {
   subscribeWhenReady(lobbyCode);
-  showScreen(selectors.waitingRoomTemplate);
-  setupWaitingRoom();
+  if (initialGameStatus == "WAITING") {
+    showScreen(selectors.waitingRoomTemplate);
+    setupWaitingRoom();
+  } else if (initialGameStatus == "FINISHED") {
+    ended = true;
+    showScreen(selectors.endScreenTemplate);
+    setupEndScreen();
+  } else if (initialGameStatus == "PLAYING") {
+    if (initialTrackSent) {
+      playing = true;
+      showScreen(selectors.gameScreenTemplate);
+    } else showScreen(selectors.trackSentTemplate);
+  }
 });
