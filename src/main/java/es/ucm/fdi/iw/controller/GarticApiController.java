@@ -26,7 +26,6 @@ import es.ucm.fdi.iw.model.MIDISequence;
 import es.ucm.fdi.iw.model.MIDITrack;
 import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.repository.MIDIGameRepository;
-import es.ucm.fdi.iw.repository.MIDIInstrumentRepository;
 import es.ucm.fdi.iw.repository.MIDISequenceRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -41,13 +40,10 @@ public class GarticApiController {
 
     private final MIDISequenceRepository midiSequenceRepository;
     private final MIDIGameRepository midiGameRepository;
-    private final MIDIInstrumentRepository midiInstrumentRepository;
 
-    public GarticApiController(MIDISequenceRepository midiSequenceRepository, MIDIGameRepository midiGameRepository,
-            MIDIInstrumentRepository midiInstrumentRepository) {
+    public GarticApiController(MIDISequenceRepository midiSequenceRepository, MIDIGameRepository midiGameRepository) {
         this.midiSequenceRepository = midiSequenceRepository;
         this.midiGameRepository = midiGameRepository;
-        this.midiInstrumentRepository = midiInstrumentRepository;
     }
 
     private static final Logger log = LogManager.getLogger(ApiController.class);

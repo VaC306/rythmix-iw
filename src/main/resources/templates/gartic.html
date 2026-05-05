@@ -70,6 +70,14 @@
     const isOwner = "[[${isOwner}]]"=="true"
     const lobbyCode = "[[${lobbyCode}?:'']]"
     const username  = "[[${u?.username}?:'Unknown']]"
+    const initialGameStatus = "[[${gameStatus}?:'WAITING']]"
+    const initialTrackSent = ("[[${trackSent}]]" != "false")
+    let gameData = {
+        currentRound: parseInt("[[${currentRound}?:0]]"),
+        totalRounds: parseInt("[[${totalRounds}?:4]]"),
+        instrument: parseInt("[[${instrument}?:1]]"),
+        roundData: {}
+    } 
 </script>
 <script th:src="@{/js/components/gartic-game-client.js}" src="/js/components/gartic-game-client.js" defer></script>
 <script th:src="@{/js/components/piano-roll.js}" src="/js/components/piano-roll.js" defer></script>

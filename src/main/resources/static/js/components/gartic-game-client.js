@@ -25,11 +25,10 @@ const selectors = {
   numberOfRoundsSelector: "#select-rounds",
 };
 
-let gameData,
-  pianoRoll,
+let pianoRoll,
   availableInstruments = null,
   waitingForNewRound = false,
-  ended=false;
+  ended = false;
 
 function subscribeWhenReady(lobbyCode) {
   const interval = setInterval(() => {
@@ -53,7 +52,7 @@ function handleMessage(m) {
       break;
     case "GAMESTARTED":
     case "NEWROUND":
-        waitingForNewRound = false;
+      waitingForNewRound = false;
       showScreen(selectors.gameScreenTemplate);
       gameData = m.data;
       setupGameScreen();
@@ -62,9 +61,9 @@ function handleMessage(m) {
       showScreen(selectors.trackSentTemplate);
       break;
     case "GAMEENDED":
-        ended=true;
+      ended = true;
       showScreen(selectors.endScreenTemplate);
-      setupEndScreen(m.data);
+      setupEndScreen();
   }
 }
 
@@ -130,8 +129,6 @@ function sendStartRequest() {
   });
 }
 
-
-
 // function sendTrack() {
 //   console.log("Sending created track...");
 //   ws.stompClient.send(
@@ -142,7 +139,7 @@ function sendStartRequest() {
 // }
 
 function sendTrack() {
-    waitingForNewRound = true;
+  waitingForNewRound = true;
   console.log("Sending created track...");
   fetch(`/api/gartic/lobby/${lobbyCode}/track/post`, {
     method: "POST",
@@ -232,7 +229,7 @@ async function getRoundSequence(retries = 5) {
     });
     if (r.ok) return r.json();
     if (r.status != 409) return null;
-    console.log(`Retrying in ${delay}ms`)
+    console.log(`Retrying in ${delay}ms`);
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
   }
@@ -297,8 +294,8 @@ function setupCards(sequences) {
         playButtonId: `playButtonEnd${i}`,
         pauseButtonId: `pauseButtonEnd${i}`,
         stopButtonId: `stopButtonEnd${i}`,
-        saveButtonId: `saveButtonEnd${i}`,      
-        midiSequenceId: sequences[i].id
+        saveButtonId: `saveButtonEnd${i}`,
+        midiSequenceId: sequences[i].id,
       }),
     );
     let pr = new PianoRoll({});
@@ -321,29 +318,44 @@ async function getAllSequences(retries = 5) {
     });
     if (r.ok) return r.json();
     if (r.status != 409) return null;
-    console.log(`Retrying in ${delay}ms`)
+    console.log(`Retrying in ${delay}ms`);
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
   }
 }
 
 async function saveFavoriteSong(midiSequenceId, button) {
-  const r = await fetch(`/api/favSong/${midiSequenceId}`,{method: 'POST'});
+  const r = await fetch(`/api/favSong/${midiSequenceId}`, { method: "POST" });
   if (r.ok) {
-    button.classList.remove('btn-outline-success');
-    button.classList.add('btn-success');
+    button.classList.remove("btn-outline-success");
+    button.classList.add("btn-success");
     button.disabled = true;
   }
 }
 
 async function setupEndScreen() {
-    const sequences = await getAllSequences()
+  const sequences = await getAllSequences();
   console.log(sequences);
   setupCards(sequences);
 }
 
 document.addEventListener("DOMContentLoaded", (e) => {
   subscribeWhenReady(lobbyCode);
-  showScreen(selectors.waitingRoomTemplate);
-  setupWaitingRoom();
+  if (initialGameStatus == "WAITING") {
+    showScreen(selectors.waitingRoomTemplate);
+    setupWaitingRoom();
+  } else if (initialGameStatus == "FINISHED") {
+    ended = true;
+    showScreen(selectors.endScreenTemplate);
+    setupEndScreen();
+  } else if (initialGameStatus == "PLAYING") {
+    if (!initialTrackSent) {
+      waitingForNewRound = false;
+      showScreen(selectors.gameScreenTemplate);
+      setupGameScreen();
+    } else {
+      waitingForNewRound = true;
+      showScreen(selectors.trackSentTemplate);
+    }
+  }
 });

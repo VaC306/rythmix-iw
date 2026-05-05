@@ -2,20 +2,16 @@ package es.ucm.fdi.iw.controller;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +20,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.auxiliar.GameUtils;
@@ -42,7 +37,6 @@ import es.ucm.fdi.iw.repository.MIDISequenceRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
 
 @Controller()
@@ -160,16 +154,14 @@ public class GarticController {
         }
 
         log.debug("User {} accessing lobby {}", u == null ? "anonymous" : u.getUsername(), lobbyCode);
-        if(game.getCurrentRound() == game.getTotalRounds()){
-            game.setStatus(GarticGameStatus.FINISHED);
-            midiGameRepository.save(game);
-        } else {
-            model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
-        }
+
         model.addAttribute("isOwner", game.getOwner().getId() == u.getId());
+        model.addAttribute("trackSent", game.getTrackSubmissions().get(u.getId()));
         model.addAttribute("isAdmin", u.hasRole(User.Role.ADMIN));
         model.addAttribute("currentRound", game.getCurrentRound());
         model.addAttribute("totalRounds", game.getTotalRounds());
+        if(game.getStatus() != GarticGameStatus.FINISHED)
+            model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
         model.addAttribute("gameStatus", game.getStatus());
         model.addAttribute("playerList", game.getPlayers().stream().map((p)->new PlayerInfo(p.getId(),p.getUsername(), game.getOwner().getId() == p.getId())).toList());
         log.info("Lobby {} has {} players", lobbyCode, game.getPlayers().size());
@@ -199,6 +191,12 @@ public class GarticController {
             return "lobby";
         }
         GarticGame game = (GarticGame) optGame.get();
+
+        if(game.getPlayers().stream().anyMatch(p->p.getId() == u.getId())){
+            // El jugador ya pertenece al lobby
+            return "redirect:/gartic/lobby/" + lobbyCode;
+        }
+
         log.info("User {} joining lobby {}", u.getUsername(), lobbyCode);
         game.addPlayer(u);
 
