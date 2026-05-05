@@ -137,8 +137,9 @@ public class RootController {
         return "games";
     }
 
-     @GetMapping("/favoriteSongs")
-    public String favoriteSongs() {
+    @GetMapping("/favoriteSongs")
+    public String favoriteSongs(HttpSession session, Model model) {
+        model.addAttribute("u", session.getAttribute("u"));
         return "favoriteSongs";
     }
 
@@ -155,7 +156,7 @@ public class RootController {
             case "sorpresa":
                 gameName = "🎲 Canción sorpresa";
                 break;
-            case "continuacion":
+            case "continue":
                 gameName = "▶️ Continuación de canción";
                 break;
             default:
