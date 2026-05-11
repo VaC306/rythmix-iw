@@ -151,7 +151,13 @@ public class AdminController {
     File tmpOut = localData.getFile(musicDir, id + ".processed.mp3");
 
     try (BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(tmpIn))) {
-      stream.write(audioFile.getBytes());
+      stream.write(audioFile.getBytes());} 
+    catch (Exception e) {
+      log.error("Error al escribir el audio para capa {}", id, e);
+      return "redirect:/admin/?audioErr=admin.audio.err.saveFailed";
+    }
+    
+    try {
 
       if (trimEnabled) {
         ProcessingResult pr = processWithFfmpeg(tmpIn, tmpOut);
