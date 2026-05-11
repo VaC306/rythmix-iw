@@ -4,6 +4,7 @@ import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.model.Song;
 import es.ucm.fdi.iw.model.SongLayer;
 import es.ucm.fdi.iw.repository.SongLayerRepository;
+import es.ucm.fdi.iw.repository.SongReportRepository;
 import es.ucm.fdi.iw.repository.SongRepository;
 import es.ucm.fdi.iw.repository.AuditWebRepository;
 import java.util.List;
@@ -69,6 +70,9 @@ public class AdminController {
 
   @Autowired
   private SongLayerRepository songLayerRepository;
+
+   @Autowired
+  private SongReportRepository songReportRepository;
 
   @Autowired
   private LocalData localData;
@@ -369,6 +373,13 @@ public class AdminController {
 
     return "dashboard";
   }
+
+  @GetMapping("/reports")
+  public String reports(Model model) {
+    model.addAttribute("songReports", songReportRepository.findByOrderByDateRegisteredDesc());
+    return "songReportsView";
+  }
+  
 }
 
 
