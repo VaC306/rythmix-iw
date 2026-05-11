@@ -134,6 +134,10 @@
               <i class="bi bi-lightning-charge-fill"></i>
               <span th:text="#{guess.tip}"></span>
             </span>
+
+            <div class="text-center mt-3">
+              <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#reportModal"><i class="bi bi-flag"> </i> <strong>Reportar problema </strong></button>              
+            </div>
           </div>
         </div>
 
@@ -174,6 +178,32 @@
               <span th:if="${success}">✅ Daily completado.</span>
               <span th:unless="${success}">⏳ Daily terminado por intentos.</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 class="modal-title d-flex align-items-center gap-2">
+                <i class="bi bi-flag-fill text-warning"> </i>
+                  <span th:text="#{guess.report.title}">Introduzca el problema encontrado en la canción</span>
+              </h3>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>  
+            </div>
+            <form th:action="@{/guess/reportSong}" method="post">
+              <input type="hidden" id="reportCSRF" />
+              <input type="hidden" th:name="songId" th:value="${song.id}" />
+                <div class="modal-body">
+                  <textarea class="form-control" name="details" rows="5" maxlength="500" th:placeholder="#{guess.report.placeholder}">
+                  </textarea>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" th:text="#{guess.report.cancel}">Cancelar</button>
+                  <button type="submit" class="btn btn-warning btn-sm"><i class="bi bi-flag"></i> <span th:text="#{guess.report.submit}">Enviar</span></button>
+                </div>
+            </form>
           </div>
         </div>
       </div>
@@ -259,6 +289,13 @@
           audio.currentTime = (pct * audio.duration);
         });
       })();
+      
+      document.getElementById('reportModal').addEventListener('show.bs.Modal', () => {
+        const input = document.getElementById('reportCSRF');
+        input.name = config.csrf.name;
+        input.name = config.csrf.value;
+      })
+
     </script>
   </body>
 </html>
