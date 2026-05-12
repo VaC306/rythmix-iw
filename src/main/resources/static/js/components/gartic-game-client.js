@@ -64,6 +64,10 @@ function handleMessage(m) {
       ended = true;
       showScreen(selectors.endScreenTemplate);
       setupEndScreen();
+    case KICKED:
+      alert("Has sido expulsado del lobby.");
+      window.location.hred = "/";
+      break;
   }
 }
 
@@ -73,6 +77,9 @@ function updatePlayers(list) {
   document.querySelectorAll(selectors.playerCounter).forEach((el) => (el.textContent = list.length));
   const ownerBadge = `<span class="badge bg-warning text-dark">Owner</span>`;
   list.forEach((player) => {
+    const kickButton = '';
+    if (isOwner && !player.isOwner)
+      kickButton = `<button onclick="kickPlayer('${player.username}')" class="btn btn-sm btn-danger"><i class="bi bi-x-md"></i></button>`;
     const html = `
     <div class="list-group-item d-flex bg-transparent align-items-center">
       <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
@@ -339,7 +346,14 @@ async function setupEndScreen() {
   setupCards(sequences);
 }
 
+function kickPlayer(username){
+  fetch(`/api/gartic/lobby/${lobbyCode}/kick/${username}`,{
+    method: "POST", headers: {"X-CSRF-TOKEN": config.csrf.value}
+  });
+}
+
 document.addEventListener("DOMContentLoaded", (e) => {
+  ws.receive = (msg) => {if (msg?.type === "KICKED") {alert("Has sido expulsado del juego."); window.location.href="/";}};
   subscribeWhenReady(lobbyCode);
   if (initialGameStatus == "WAITING") {
     showScreen(selectors.waitingRoomTemplate);

@@ -8,7 +8,8 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.auxiliar.GameUtils;
@@ -35,6 +37,8 @@ import es.ucm.fdi.iw.repository.MIDISequenceRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 
 @Controller()
@@ -208,6 +212,27 @@ public class GarticController {
         messagingTemplate.convertAndSend("/topic/gartic/lobby/" + lobbyCode, up);
         return "redirect:/gartic/lobby/" + lobbyCode;
     }
+
+    @PostMapping("/lobby/{lobbyCode}/kick/{username}")
+    @Transactional
+    public void kickPlayer(@PathVariable String lobbyCode, @PathVariable String username, HttpSession session) {
+        User u = (User) session.getAttribute("u");
+        if (u == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not logged in");
+        }
+
+        GarticGame game = (GarticGame) midiGameRepository.findByLobbyCode(lobbyCode).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "not the owner"));
+        if (game.getOwner().getId() != u.getId()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not the owner");
+        }
+
+        game.getPlayers().removeIf(p->p.getUsername().equals(username));
+        midiGameRepository.save(game);
+
+        messagingTemplate.convertAndSendToUser(username, "/queue/updates", new GameUpdate("KICKED", null));
+        messagingTemplate.convertAndSend("/topic/gartic/lobby/"+lobbyCode, new GameUpdate("PLAYERSUPDATED", game.getPlayers().stream().map(p-> new PlayerInfo(p.getId(), p.getUsername(), p.getId()==game.getOwner().getId())).toList()));
+    }
+    
 
     public record GameUpdate(String type, Object data) {}
     public record UserRequest(long userId) {} 
