@@ -262,17 +262,16 @@ public class GuessController {
       int newLayer = Math.min(at.getCurrentLayer() + 1, maxLayer);
       at.setCurrentLayer(newLayer);
 
-      updateScore(u, false, 0);
-
       if (at.getTries() >= dg.getMaxTries()) {
-        log.info("Usuario {} agotó sus intentos en daily={}. Canción correcta: {} - {}",
+        updateScore(u, false, 0);
+        log.info("Usuario {} agotó sus intentos en daily={}. Derrota final. Canción correcta: {} - {}",
             u.getId(), dg.getId(), song.getTitle(), song.getArtist());
         session.setAttribute("guessMsg", "❌ Sin intentos. Era: " + song.getTitle() + " - " + song.getArtist());
       } else if (newLayer == maxLayer) {
-        log.debug("Usuario {} falló en daily={} y desbloqueó la última capa", u.getId(), dg.getId());
+        log.debug("Usuario {} tuvo fallo intermedio en daily={} y desbloqueó la última capa", u.getId(), dg.getId());
         session.setAttribute("guessMsg", "Fallaste. Última capa desbloqueada");
       } else {
-        log.debug("Usuario {} falló en daily={} y avanzó a la capa {}", u.getId(), dg.getId(), newLayer);
+        log.debug("Usuario {} tuvo fallo intermedio en daily={} y avanzó a la capa {}", u.getId(), dg.getId(), newLayer);
         session.setAttribute("guessMsg", "Fallaste. Siguiente capa desbloqueada");
       }
     }
@@ -346,16 +345,30 @@ public class GuessController {
   }
 
   private int calcPoints(DailyGame dg, Attempt at, int maxLayer) {
-    int layerPenalty = at.getCurrentLayer();
-    int tryPenalty = at.getTries() * 2;
-    int base = 10;
+    final int minPoints = 20;
+    final int maxPoints = 100;
+    final double layerWeight = 0.35;
+    final double triesWeight = 0.65;
 
-    int points = Math.max(1, base - layerPenalty - tryPenalty);
+    int usedLayer = clamp(at.getCurrentLayer(), 0, Math.max(0, maxLayer));
+    int usedTries = clamp(at.getTries(), 0, Math.max(0, dg.getMaxTries()));
 
-    log.debug("Cálculo de puntos para daily={}: base={}, layerPenalty={}, tryPenalty={}, result={}",
-        dg.getId(), base, layerPenalty, tryPenalty, points);
+    double layerPenalty = maxLayer == 0 ? 0 : (double) usedLayer / maxLayer;
+    double triesPenalty = dg.getMaxTries() == 0 ? 0 : (double) usedTries / dg.getMaxTries();
+    double totalPenalty = (layerPenalty * layerWeight) + (triesPenalty * triesWeight);
+    totalPenalty = Math.max(0, Math.min(1, totalPenalty));
 
-    return points;
+    int basePoints = (int) Math.round(maxPoints - ((maxPoints - minPoints) * totalPenalty));
+
+    int difficulty = dg.getSong() == null ? 1 : dg.getSong().getDifficulty();
+    int normalizedDifficulty = clamp(difficulty, 1, 4);
+    int bonusPct = (normalizedDifficulty - 1) * 10;
+    int finalPoints = (int) Math.round(basePoints * (1 + bonusPct / 100.0));
+
+    log.debug("Puntos daily={}: layerPenalty={}, triesPenalty={}, totalPenalty={}, basePoints={}, difficulty={}, bonusPct={}, finalPoints={}",
+        dg.getId(), layerPenalty, triesPenalty, totalPenalty, basePoints, normalizedDifficulty, bonusPct, finalPoints);
+
+    return Math.max(minPoints, finalPoints);
   }
 
   private static int clamp(int v, int min, int max) {
