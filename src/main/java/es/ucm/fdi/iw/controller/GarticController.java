@@ -8,9 +8,6 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,8 +26,8 @@ import es.ucm.fdi.iw.model.MIDIGame;
 import es.ucm.fdi.iw.model.MIDIInstrument;
 import es.ucm.fdi.iw.model.MIDISequence;
 import es.ucm.fdi.iw.model.MIDITrack;
-import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.model.Topic;
+import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.repository.MIDIGameRepository;
 import es.ucm.fdi.iw.repository.MIDIInstrumentRepository;
 import es.ucm.fdi.iw.repository.MIDISequenceRepository;
@@ -138,7 +135,7 @@ public class GarticController {
         }
 
         Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(lobbyCode);
-        if (optGame.isEmpty()) {
+        if (optGame.isEmpty() || !(optGame.get() instanceof GarticGame)) {
             log.warn("Lobby not found for code {}", lobbyCode);
             model.addAttribute("showError", true);
             model.addAttribute("errorTitleKey", "lobby.error.notfound.title");
@@ -183,7 +180,7 @@ public class GarticController {
         auditHelper.log(u, "JOINED_LOBBY", "Se ha unido a la sala con id de sala: " + lobbyCode);
 
         Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(lobbyCode);
-        if (optGame.isEmpty()) {
+        if (optGame.isEmpty() || !(optGame.get() instanceof GarticGame)) {
             log.warn("User {} tried to join missing lobby {}", u.getUsername(), lobbyCode);
             model.addAttribute("showError", true);
             model.addAttribute("errorTitleKey", "lobby.error.notfound.title");
