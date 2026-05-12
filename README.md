@@ -11,10 +11,12 @@ Escucha un fragmento musical y demuestra que sabes reconocer la canción antes q
 ✅ *Esta parte está implementada y 100% funcional.*
 
 ### 🎲 Canción sorpresa
-Cada jugador aporta una parte sin conocer el resultado final, dando lugar a combinaciones inesperadas.
+Cada jugador aporta una parte sin conocer el resultado final, dando lugar a combinaciones inesperadas.  
+✅ *Esta parte está implementada y 100% funcional.*
 
 ### ▶️ Continuación de canción
-Escucha el inicio de una canción e intenta continuar correctamente la letra o la melodía.
+*Crea la mejor canción posible, votando por los mejores tracks!*  
+✅ *Esta parte está implementada y 100% funcional.*
 
 ---
 
@@ -41,6 +43,10 @@ La estructura del proyecto está pensada para facilitar la ampliación futura co
 - **Thymeleaf**  
 - **Bootstrap 5**  
 - **Base de datos H2** (entorno de desarrollo)
+- **Karate** para tests externos e internos
+
+Fuera de la plantilla:
+- **ABC.js** para renderizado de música con formato ABC para la creación de tracks en los juegos
 
 ---
 
@@ -69,7 +75,6 @@ Si FFmpeg no está instalado y el recorte está activado, la subida falla con me
 - Ubuntu/Debian: `sudo apt install ffmpeg`
 
 Verificación:
-
 - `ffmpeg -version`
 - `ffprobe -version`
 
@@ -84,9 +89,26 @@ En `src/main/resources/application.properties`:
 
 ---
 
+## Usuarios por defecto
+
+| Usuario | Contraseña |
+|---------|------------|
+| a (admin) | aa |
+| b | aa |
+
+---
+
 ## 🎓 Contexto académico
 
 Este proyecto ha sido desarrollado como parte de la asignatura *Ingeniería Web (IW)*, aplicando el patrón MVC, control de acceso con Spring Security y buenas prácticas de desarrollo web.
+
+---
+
+## 🤖 Uso de IA generativa y LLMs
+
+- Debugging de trazas desconocidas
+- Identificación de trazas de ejecución como medida para entender mejor las implementaciones de otros miembros del equipo
+- Ayuda para escribir tests y consultar la documentación
 
 ---
 
