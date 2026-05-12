@@ -12,8 +12,8 @@ import jakarta.persistence.NamedQueries;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.SequenceGenerator;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+//import org.apache.logging.log4j.LogManager;
+//import org.apache.logging.log4j.Logger;
 
 import lombok.Data;
 import lombok.Getter;
@@ -32,7 +32,7 @@ import lombok.AllArgsConstructor;
 @Data
 public class Message implements Transferable<Message.Transfer> {
 	
-	private static Logger log = LogManager.getLogger(Message.class);	
+	//private static Logger log = LogManager.getLogger(Message.class);	
 	
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "gen")

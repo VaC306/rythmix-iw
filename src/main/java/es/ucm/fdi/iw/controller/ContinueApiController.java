@@ -22,11 +22,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import es.ucm.fdi.iw.auxiliar.GameUtils;
 import es.ucm.fdi.iw.model.ContinueGame;
 import es.ucm.fdi.iw.model.ContinueGame.ContinueGameStatus;
-import es.ucm.fdi.iw.model.GarticGame;
-import es.ucm.fdi.iw.model.GarticGame.GarticGameStatus;
 import es.ucm.fdi.iw.model.MIDISequence;
 import es.ucm.fdi.iw.model.MIDITrack;
 import es.ucm.fdi.iw.model.User;
