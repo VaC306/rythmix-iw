@@ -40,7 +40,7 @@
         </div>
 
         <!-- Info canción (sin revelar título) -->
-        <div class="card mb-4 shadow-sm">
+        <div th:if="${dailyAvailable}" class="card mb-4 shadow-sm">
           <div class="card-body">
             <h2 class="card-title fs-3" th:text="#{guess.info}"></h2>
 
@@ -63,7 +63,7 @@
         </div>
 
         <!-- Player -->
-        <div class="card mb-4 shadow-sm">
+        <div th:if="${dailyAvailable}" class="card mb-4 shadow-sm">
           <div class="card-body">
             <div class="text-center mb-3">
               <h2 class="mb-2 fs-5" th:text="#{guess.currentLayer}"></h2>
@@ -142,7 +142,7 @@
         </div>
 
         <!-- Adivinar -->
-        <div class="card shadow-sm">
+        <div th:if="${dailyAvailable}" class="card shadow-sm">
           <div class="card-body">
             <h2 class="card-title mb-3 fs-3" th:text="#{guess.title}"></h2>
 
@@ -182,7 +182,7 @@
         </div>
       </div>
 
-      <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+      <div th:if="${dailyAvailable}" class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-md">
           <div class="modal-content">
             <div class="modal-header">
@@ -224,6 +224,10 @@
         const audioError = document.getElementById("audioError");
         const playLabel = "[[#{guess.play}]]";
         const pauseLabel = "[[#{guess.pause}]]";
+
+        if (!audio || !seek || !tCurrent || !tTotal || !playIcon || !playText) {
+          return;
+        }
 
         const fmt = (sec) => {
           if (!isFinite(sec) || sec < 0) return "0:00";
@@ -290,11 +294,14 @@
         });
       })();
       
-      document.getElementById('reportModal').addEventListener('show.bs.Modal', () => {
-        const input = document.getElementById('reportCSRF');
-        input.name = config.csrf.name;
-        input.name = config.csrf.value;
-      })
+      const reportModal = document.getElementById('reportModal');
+      if (reportModal) {
+        reportModal.addEventListener('show.bs.Modal', () => {
+          const input = document.getElementById('reportCSRF');
+          input.name = config.csrf.name;
+          input.value = config.csrf.value;
+        });
+      }
 
     </script>
   </body>
