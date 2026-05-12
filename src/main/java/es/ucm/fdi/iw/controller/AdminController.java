@@ -349,18 +349,13 @@ public class AdminController {
   public String dashboard(@RequestParam(required = false) Long userId, @RequestParam(required = false) String actionPerformed, Model model) {
     long totalUsers = (Long) entityManager.createQuery("select count(u) from User u").getSingleResult();
     
-    long publicRooms = 0;
-    // A definir la consulta
-    /*(Long) entityManager.createQuery("select count(r) from Rooms r where r.publicRoom=true").getSingleResult();*/ 
+    long publicRooms = (Long) entityManager.createQuery("select count(g) from MIDIGame g where g.isPublic=true").getSingleResult();
     
-    long privateRooms = 0;
-    // A definir la consulta
-    /*(Long) entityManager.createQuery("select count(r) from Rooms r where r.publicRoom=false").getSingleResult();*/
+    long privateRooms = (Long) entityManager.createQuery("select count(g) from MIDIGame g where g.isPublic=false").getSingleResult();
     
-    long totalWinners = 0;
-    // A definir la consulta
+    long totalSongs = (Long) entityManager.createQuery("select count(s) from Song s").getSingleResult();
 
-    AppStats stats = new AppStats(publicRooms, privateRooms, totalUsers, totalWinners);
+    AppStats stats = new AppStats(publicRooms, privateRooms, totalUsers, totalSongs);
     
     model.addAttribute("stats", stats);
 
