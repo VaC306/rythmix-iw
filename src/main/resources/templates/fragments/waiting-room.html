@@ -34,6 +34,7 @@
                             <span th:text="${item.username}" class="flex-grow-1 text-start">Username</span>
                             <span th:if="${item.isOwner}" 
                                     class="badge bg-warning text-dark">Owner</span>
+                            <button th:if="${isOwner && !item.isOwner}" th:onclick="'kickPlayer(\''+${item.username}+'\')'" class="btn btn-sm btn-danger">Kick</button>
                         </div>
                         
                         <div th:if="${playerList.empty}" class="text-center text-muted py-4 border rounded ">
