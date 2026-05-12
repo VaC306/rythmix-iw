@@ -4,18 +4,17 @@ import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.model.*;
 import es.ucm.fdi.iw.repository.*;
+import es.ucm.fdi.iw.service.AudioAvailabilityService;
 
 import jakarta.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,12 +27,6 @@ public class GuessController {
   @Autowired
   private AuditHelper auditHelper;
 
-  @Autowired
-  private LocalData localData;
-
-  @Value("${app.storage.music-dir:music/layer}")
-  private String musicDir;
-
   private static final Logger log = LogManager.getLogger(GuessController.class);
 
   private final SongRepository songRepo;
@@ -42,6 +35,7 @@ public class GuessController {
   private final AttemptRepository attemptRepo;
   private final ScoreRepository scoreRepo;
   private final SongReportRepository songReportRepository;
+  private final AudioAvailabilityService audioAvailabilityService;
 
   public GuessController(
       SongRepository songRepo,
@@ -49,13 +43,15 @@ public class GuessController {
       DailyGameRepository dailyRepo,
       AttemptRepository attemptRepo,
       ScoreRepository scoreRepo, 
-      SongReportRepository songReportRepository) {
+      SongReportRepository songReportRepository,
+      AudioAvailabilityService audioAvailabilityService) {
     this.songRepo = songRepo;
     this.layerRepo = layerRepo;
     this.dailyRepo = dailyRepo;
     this.attemptRepo = attemptRepo;
     this.scoreRepo = scoreRepo;
     this.songReportRepository = songReportRepository;
+    this.audioAvailabilityService = audioAvailabilityService;
   }
 
   @ModelAttribute
@@ -76,7 +72,7 @@ public class GuessController {
     DailyGame dg = getOrCreateDaily(LocalDate.now());
     Song song = dg != null ? dg.getSong() : null;
     List<SongLayer> layers = song != null ? layerRepo.findBySongOrderByIdxAsc(song) : List.of();
-    boolean dailyAvailable = dg != null && hasAllAvailableAudio(layers);
+    boolean dailyAvailable = dg != null && audioAvailabilityService.hasAllAvailableAudio(layers);
 
     if (!dailyAvailable) {
       if (song != null) {
@@ -90,7 +86,7 @@ public class GuessController {
       model.addAttribute("noAudioAvailable", true);
       model.addAttribute("finished", true);
       model.addAttribute("success", false);
-      model.addAttribute("songList", availableSongs());
+      model.addAttribute("songList", audioAvailabilityService.availableSongs());
 
       Object msg = session.getAttribute("guessMsg");
       if (msg != null) {
@@ -145,7 +141,7 @@ public class GuessController {
       model.addAttribute("loginWarning", true);
     }
 
-    model.addAttribute("songList", availableSongs());
+    model.addAttribute("songList", audioAvailabilityService.availableSongs());
     return "guess";
   }
 
@@ -167,7 +163,7 @@ public class GuessController {
       return "redirect:/guess";
     }
     List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(dg.getSong());
-    if (!hasAllAvailableAudio(layers)) {
+    if (!audioAvailabilityService.hasAllAvailableAudio(layers)) {
       log.info("Usuario {} intentó navegar capas sin audios disponibles en daily={}", u.getId(), dg.getId());
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
       return "redirect:/guess";
@@ -254,7 +250,7 @@ public class GuessController {
     }
     Song song = dg.getSong();
     List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
-    if (!hasAllAvailableAudio(layers)) {
+    if (!audioAvailabilityService.hasAllAvailableAudio(layers)) {
       log.info("Usuario {} intentó enviar respuesta sin audios disponibles en daily={}", u.getId(), dg.getId());
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
       return "redirect:/guess";
@@ -326,7 +322,7 @@ public class GuessController {
 
   private DailyGame getOrCreateDaily(LocalDate today) {
     return dailyRepo.findByGameDay(today).orElseGet(() -> {
-      List<Song> songs = availableSongs();
+      List<Song> songs = audioAvailabilityService.availableSongs();
       if (songs.isEmpty()) {
         log.error("No se puede crear el daily para {}: ninguna canción tiene todas sus capas mp3 disponibles", today);
         return null;
@@ -408,38 +404,4 @@ public class GuessController {
     return s == null ? "" : s.trim().toLowerCase();
   }
 
-  private List<Song> availableSongs() {
-    return songRepo.findAll().stream()
-        .filter(this::songHasAllLayersAvailable)
-        .toList();
-  }
-
-  private boolean songHasAllLayersAvailable(Song song) {
-    List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
-    return hasAllAvailableAudio(layers);
-  }
-
-  private boolean hasAllAvailableAudio(List<SongLayer> layers) {
-    if (layers.isEmpty()) {
-      return false;
-    }
-    for (SongLayer layer : layers) {
-      if (!isAudioAvailable(layer)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private boolean isAudioAvailable(SongLayer layer) {
-    String url = layer.getAudioUrl();
-    if (url == null || url.isBlank()) {
-      return false;
-    }
-    if (url.startsWith("/song-layer/")) {
-      File f = localData.getFile(musicDir, layer.getId() + ".mp3");
-      return f.exists() && f.isFile();
-    }
-    return GuessController.class.getClassLoader().getResource("static" + url) != null;
-  }
 }

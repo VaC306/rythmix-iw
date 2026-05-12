@@ -4,6 +4,7 @@ import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.model.Song;
 import es.ucm.fdi.iw.model.SongLayer;
 import es.ucm.fdi.iw.model.DailyGame;
+import es.ucm.fdi.iw.service.AudioAvailabilityService;
 import es.ucm.fdi.iw.repository.SongLayerRepository;
 import es.ucm.fdi.iw.repository.SongReportRepository;
 import es.ucm.fdi.iw.repository.SongRepository;
@@ -83,6 +84,8 @@ public class AdminController {
    @Autowired
   private SongReportRepository songReportRepository;
 
+  private final AudioAvailabilityService audioAvailabilityService;
+
   @Autowired
   private LocalData localData;
 
@@ -112,6 +115,10 @@ public class AdminController {
   }
 
   private static final Logger log = LogManager.getLogger(AdminController.class);
+
+  public AdminController(AudioAvailabilityService audioAvailabilityService) {
+    this.audioAvailabilityService = audioAvailabilityService;
+  }
 
   @GetMapping("/")
   public String index(
@@ -147,7 +154,7 @@ public class AdminController {
     }
 
     List<Song> availableSongs = songRepository.findAll().stream()
-        .filter(this::songHasAllLayersAvailable)
+        .filter(audioAvailabilityService::songHasAllLayersAvailable)
         .toList();
     if (availableSongs.isEmpty()) {
       return "redirect:/admin/?dailyErr=admin.daily.err.noCompleteSongs";
@@ -339,7 +346,7 @@ public class AdminController {
       int totalLayers = layers.size();
       int uploadedLayers = 0;
       for (SongLayer layer : layers) {
-        if (isAudioAvailable(layer)) {
+        if (audioAvailabilityService.isAudioAvailable(layer)) {
           uploadedLayers++;
         }
       }
@@ -347,31 +354,6 @@ public class AdminController {
       statusBySongId.put(song.getId(), new SongAudioStatus(totalLayers, uploadedLayers, complete));
     }
     return statusBySongId;
-  }
-
-  private boolean songHasAllLayersAvailable(Song song) {
-    List<SongLayer> layers = songLayerRepository.findBySongOrderByIdxAsc(song);
-    if (layers.isEmpty()) {
-      return false;
-    }
-    for (SongLayer layer : layers) {
-      if (!isAudioAvailable(layer)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private boolean isAudioAvailable(SongLayer layer) {
-    String url = layer.getAudioUrl();
-    if (url == null || url.isBlank()) {
-      return false;
-    }
-    if (url.startsWith("/song-layer/")) {
-      File f = localData.getFile(musicDir, layer.getId() + ".mp3");
-      return f.exists() && f.isFile();
-    }
-    return AdminController.class.getClassLoader().getResource("static" + url) != null;
   }
 
   private record SongAudioStatus(int totalLayers, int uploadedLayers, boolean complete) {
