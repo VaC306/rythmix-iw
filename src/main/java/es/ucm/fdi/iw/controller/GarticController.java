@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 
 import es.ucm.fdi.iw.auxiliar.AuditHelper;
@@ -215,6 +216,7 @@ public class GarticController {
 
     @PostMapping("/lobby/{lobbyCode}/kick/{username}")
     @Transactional
+    @ResponseBody
     public void kickPlayer(@PathVariable String lobbyCode, @PathVariable String username, HttpSession session) {
         User u = (User) session.getAttribute("u");
         if (u == null) {
