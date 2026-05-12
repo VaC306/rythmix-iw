@@ -14,18 +14,21 @@ import lombok.NoArgsConstructor;
 @Entity
 @Data
 @NoArgsConstructor
-public class AuditWeb {
+public class SongReport {
     
-  @Id
-  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "gen")
-  @SequenceGenerator(name = "gen", sequenceName = "gen")
-  private long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "gen")
+    @SequenceGenerator(name = "gen", sequenceName = "gen")
+    private long id;
 
-  @ManyToOne
-  private User user;
+    @ManyToOne
+    private Song song;
 
-  private String actionPerformed;
-  private String moreDetails;
-  private LocalDateTime time = LocalDateTime.now();
+    @ManyToOne
+    private User user;
+
+    private String contentReport;
+
+    private LocalDateTime dateRegistered;
 
 }

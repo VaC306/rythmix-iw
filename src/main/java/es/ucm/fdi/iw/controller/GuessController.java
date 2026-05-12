@@ -41,18 +41,21 @@ public class GuessController {
   private final DailyGameRepository dailyRepo;
   private final AttemptRepository attemptRepo;
   private final ScoreRepository scoreRepo;
+  private final SongReportRepository songReportRepository;
 
   public GuessController(
       SongRepository songRepo,
       SongLayerRepository layerRepo,
       DailyGameRepository dailyRepo,
       AttemptRepository attemptRepo,
-      ScoreRepository scoreRepo) {
+      ScoreRepository scoreRepo, 
+      SongReportRepository songReportRepository) {
     this.songRepo = songRepo;
     this.layerRepo = layerRepo;
     this.dailyRepo = dailyRepo;
     this.attemptRepo = attemptRepo;
     this.scoreRepo = scoreRepo;
+    this.songReportRepository = songReportRepository;
   }
 
   @ModelAttribute
@@ -175,6 +178,35 @@ public class GuessController {
 
     log.debug("Usuario {} movió capa en daily={}: {} -> {}", u.getId(), dg.getId(), previousLayer, layerIndex);
 
+    return "redirect:/guess";
+  }
+
+  @PostMapping("/reportSong")
+  @Transactional
+  public String reportSong(@RequestParam long songId, @RequestParam(required = false) String details, HttpSession session){
+    User u = (User) session.getAttribute("u");
+    if (u == null) {
+      log.info("Intento de submit sin login");
+      session.setAttribute("guessMsg", "Inicia sesión para jugar.");
+      return "redirect:/login";
+    }
+
+    Song song = songRepo.findById(songId).orElse(null);
+    if(song == null){
+      log.warn("Se ha rechazado el reporte de la canción con ID-{}, debido a que no se encuentra la canción", songId);
+      return "redirect:/guess";
+    }
+
+    SongReport songReport= new SongReport();
+    songReport.setSong(song);
+    songReport.setUser(u);
+    details = (details != null) ? details.trim() : "";
+    songReport.setContentReport(details);
+    songReport.setDateRegistered(LocalDateTime.now());
+    songReportRepository.save(songReport);
+    
+    log.info("El usuario con ID-{} reportó la canción con ID-{}", u.getId(), songId);
+    session.setAttribute("guessMsg", "Se ha generado el reporte de la canción");
     return "redirect:/guess";
   }
 

@@ -22,7 +22,6 @@ import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.auxiliar.GameUtils;
 import es.ucm.fdi.iw.model.ContinueGame;
 import es.ucm.fdi.iw.model.ContinueGame.ContinueGameStatus;
-import es.ucm.fdi.iw.model.GarticGame;
 import es.ucm.fdi.iw.model.MIDIGame;
 import es.ucm.fdi.iw.model.MIDIInstrument;
 import es.ucm.fdi.iw.model.MIDISequence;

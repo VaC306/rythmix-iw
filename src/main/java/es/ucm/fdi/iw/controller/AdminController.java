@@ -4,6 +4,7 @@ import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.model.Song;
 import es.ucm.fdi.iw.model.SongLayer;
 import es.ucm.fdi.iw.repository.SongLayerRepository;
+import es.ucm.fdi.iw.repository.SongReportRepository;
 import es.ucm.fdi.iw.repository.SongRepository;
 import es.ucm.fdi.iw.repository.AuditWebRepository;
 import java.util.List;
@@ -43,7 +44,6 @@ import es.ucm.fdi.iw.model.Transferable;
 import es.ucm.fdi.iw.model.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 
@@ -70,6 +70,9 @@ public class AdminController {
 
   @Autowired
   private SongLayerRepository songLayerRepository;
+
+   @Autowired
+  private SongReportRepository songReportRepository;
 
   @Autowired
   private LocalData localData;
@@ -151,7 +154,13 @@ public class AdminController {
     File tmpOut = localData.getFile(musicDir, id + ".processed.mp3");
 
     try (BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(tmpIn))) {
-      stream.write(audioFile.getBytes());
+      stream.write(audioFile.getBytes());} 
+    catch (Exception e) {
+      log.error("Error al escribir el audio para capa {}", id, e);
+      return "redirect:/admin/?audioErr=admin.audio.err.saveFailed";
+    }
+    
+    try {
 
       if (trimEnabled) {
         ProcessingResult pr = processWithFfmpeg(tmpIn, tmpOut);
@@ -364,6 +373,13 @@ public class AdminController {
 
     return "dashboard";
   }
+
+  @GetMapping("/reports")
+  public String reports(Model model) {
+    model.addAttribute("songReports", songReportRepository.findByOrderByDateRegisteredDesc());
+    return "songReportsView";
+  }
+  
 }
 
 
