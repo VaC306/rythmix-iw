@@ -3,12 +3,16 @@ package es.ucm.fdi.iw.controller;
 import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.model.Song;
 import es.ucm.fdi.iw.model.SongLayer;
+import es.ucm.fdi.iw.model.DailyGame;
 import es.ucm.fdi.iw.repository.SongLayerRepository;
 import es.ucm.fdi.iw.repository.SongReportRepository;
 import es.ucm.fdi.iw.repository.SongRepository;
 import es.ucm.fdi.iw.repository.AuditWebRepository;
+import es.ucm.fdi.iw.repository.DailyGameRepository;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -19,6 +23,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -71,6 +77,9 @@ public class AdminController {
   @Autowired
   private SongLayerRepository songLayerRepository;
 
+  @Autowired
+  private DailyGameRepository dailyGameRepository;
+
    @Autowired
   private SongReportRepository songReportRepository;
 
@@ -108,16 +117,58 @@ public class AdminController {
   public String index(
       @RequestParam(required = false) String audioOk,
       @RequestParam(required = false) String audioErr,
+      @RequestParam(required = false) String dailyOk,
+      @RequestParam(required = false) String dailyErr,
       Model model) {
     log.info("Admin acaba de entrar");
     model.addAttribute("users",
         entityManager.createQuery("select u from User u").getResultList());
     List<Song> songs = songRepository.findAll();
+    Map<Long, SongAudioStatus> songAudioStatus = buildSongAudioStatus(songs);
+    model.addAttribute("songAudioStatus", songAudioStatus);
+    dailyGameRepository.findByGameDay(LocalDate.now())
+        .ifPresent(dg -> model.addAttribute("todayDailySongId", dg.getSong().getId()));
     model.addAttribute("songs", songs);
     model.addAttribute("layerRepo", songLayerRepository);
     model.addAttribute("audioOk", audioOk);
     model.addAttribute("audioErr", audioErr);
+    model.addAttribute("dailyOk", dailyOk);
+    model.addAttribute("dailyErr", dailyErr);
     return "admin";
+  }
+
+  @PostMapping("/daily/reshuffle")
+  @Transactional
+  public String reshuffleDailySong() {
+    LocalDate today = LocalDate.now();
+    DailyGame daily = dailyGameRepository.findByGameDay(today).orElse(null);
+    if (daily == null) {
+      return "redirect:/admin/?dailyErr=admin.daily.err.notCreated";
+    }
+
+    List<Song> availableSongs = songRepository.findAll().stream()
+        .filter(this::songHasAllLayersAvailable)
+        .toList();
+    if (availableSongs.isEmpty()) {
+      return "redirect:/admin/?dailyErr=admin.daily.err.noCompleteSongs";
+    }
+
+    Song currentSong = daily.getSong();
+    List<Song> alternatives = availableSongs.stream()
+        .filter(s -> s.getId() != currentSong.getId())
+        .toList();
+
+    Song chosen;
+    if (alternatives.isEmpty()) {
+      chosen = currentSong;
+      return "redirect:/admin/?dailyOk=admin.daily.ok.onlyOneComplete";
+    }
+
+    chosen = alternatives.get(ThreadLocalRandom.current().nextInt(alternatives.size()));
+    daily.setSong(chosen);
+    dailyGameRepository.save(daily);
+    log.info("Daily de {} cambiado manualmente de songId={} a songId={}", today, currentSong.getId(), chosen.getId());
+    return "redirect:/admin/?dailyOk=admin.daily.ok.reshuffled";
   }
 
   @PostMapping("/song-layer/{id}/audio")
@@ -279,6 +330,51 @@ public class AdminController {
   }
 
   private record ProcessingResult(boolean ok, String message) {
+  }
+
+  private Map<Long, SongAudioStatus> buildSongAudioStatus(List<Song> songs) {
+    Map<Long, SongAudioStatus> statusBySongId = new HashMap<>();
+    for (Song song : songs) {
+      List<SongLayer> layers = songLayerRepository.findBySongOrderByIdxAsc(song);
+      int totalLayers = layers.size();
+      int uploadedLayers = 0;
+      for (SongLayer layer : layers) {
+        if (isAudioAvailable(layer)) {
+          uploadedLayers++;
+        }
+      }
+      boolean complete = totalLayers > 0 && uploadedLayers == totalLayers;
+      statusBySongId.put(song.getId(), new SongAudioStatus(totalLayers, uploadedLayers, complete));
+    }
+    return statusBySongId;
+  }
+
+  private boolean songHasAllLayersAvailable(Song song) {
+    List<SongLayer> layers = songLayerRepository.findBySongOrderByIdxAsc(song);
+    if (layers.isEmpty()) {
+      return false;
+    }
+    for (SongLayer layer : layers) {
+      if (!isAudioAvailable(layer)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean isAudioAvailable(SongLayer layer) {
+    String url = layer.getAudioUrl();
+    if (url == null || url.isBlank()) {
+      return false;
+    }
+    if (url.startsWith("/song-layer/")) {
+      File f = localData.getFile(musicDir, layer.getId() + ".mp3");
+      return f.exists() && f.isFile();
+    }
+    return AdminController.class.getClassLoader().getResource("static" + url) != null;
+  }
+
+  private record SongAudioStatus(int totalLayers, int uploadedLayers, boolean complete) {
   }
 
   @PostMapping("/toggle/{id}")

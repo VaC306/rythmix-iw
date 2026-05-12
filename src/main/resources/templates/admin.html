@@ -16,6 +16,8 @@
             <h1 class="mt-5">Administración</h1>
             <div th:if="${audioOk}" class="alert alert-success mt-3" th:text="#{${audioOk}}"></div>
             <div th:if="${audioErr}" class="alert alert-danger mt-3" th:text="#{${audioErr}}"></div>
+            <div th:if="${dailyOk}" class="alert alert-success mt-3" th:text="${#messages.msgOrNull(dailyOk) ?: dailyOk}"></div>
+            <div th:if="${dailyErr}" class="alert alert-danger mt-3" th:text="${#messages.msgOrNull(dailyErr) ?: dailyErr}"></div>
         </div>
         <div class="container">
             <h1 class="mt-5">Usuarios</h1>
@@ -61,22 +63,76 @@
         <div class="container">
 
             <h2 class="mt-5">Capas de canciones</h2>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                        <h3 class="h5 mb-0" th:text="#{admin.daily.statusTitle}">Estado de canciones para Daily</h3>
+                        <form th:action="@{/admin/daily/reshuffle}" method="post" class="m-0">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            <button type="submit" class="btn btn-outline-primary">
+                                <span th:text="#{admin.daily.reshuffleBtn}">Reescoger canción del Daily de hoy</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Canción</th>
+                                <th th:text="#{admin.daily.uploadedLayers}">Capas subidas</th>
+                                <th th:text="#{admin.daily.state}">Estado</th>
+                                <th th:text="#{admin.daily.available}">Disponible para Daily</th>
+                                <th th:text="#{admin.daily.current}">Daily actual</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="song : ${songs}" th:with="status=${songAudioStatus[song.id]}">
+                                <td th:text="${song.id + ' - ' + song.title + ' (' + song.artist + ')'}">1 - Song</td>
+                                <td>
+                                    <span th:if="${status != null}" th:text="${status.uploadedLayers + '/' + status.totalLayers}">0/0</span>
+                                    <span th:unless="${status != null}">0/0</span>
+                                </td>
+                                <td>
+                                    <span th:if="${status != null and status.totalLayers == 0}" class="badge text-bg-secondary" th:text="#{admin.daily.noLayers}">Sin capas</span>
+                                    <span th:if="${status != null and status.totalLayers > 0 and status.complete}" class="badge text-bg-success" th:text="#{admin.daily.complete}">Completa</span>
+                                    <span th:if="${status != null and status.totalLayers > 0 and !status.complete}" class="badge text-bg-warning text-dark" th:text="#{admin.daily.incomplete}">Incompleta</span>
+                                </td>
+                                <td>
+                                    <span th:if="${status != null and status.complete}" class="badge text-bg-success" th:text="#{admin.daily.yes}">Si</span>
+                                    <span th:unless="${status != null and status.complete}" class="badge text-bg-danger" th:text="#{admin.daily.no}">No</span>
+                                </td>
+                                <td>
+                                    <span th:if="${todayDailySongId != null and todayDailySongId == song.id}" class="badge text-bg-info" th:text="#{admin.daily.activeToday}">Activa hoy</span>
+                                    <span th:unless="${todayDailySongId != null and todayDailySongId == song.id}" class="text-muted">-</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <table class="table table-striped align-middle">
                 <thead>
                     <tr>
                         <th>Canción</th>
                         <th>Capa</th>
                         <th>Audio actual</th>
+                        <th th:text="#{admin.daily.uploadedFile}">Archivo subido</th>
                         <th th:text="#{admin.audio.uploadReplace}">Subir/Reemplazar MP3</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <th:block th:each="song : ${songs}" th:with="layers=${layerRepo.findBySongOrderByIdxAsc(song)}">
+                    <th:block th:each="song : ${songs}" th:with="layers=${layerRepo.findBySongOrderByIdxAsc(song)},status=${songAudioStatus[song.id]}">
                         <tr th:each="layer : ${layers}">
                             <td th:text="${song.id + ' - ' + song.title}">1 - Song</td>
                             <td th:text="${layer.id + ' | idx ' + layer.idx + ' | ' + layer.label}">101 | idx 0 | DRUMS</td>
                             <td>
                                 <code th:text="${layer.audioUrl}">/music/song1/01_drums.mp3</code>
+                            </td>
+                            <td>
+                                <span th:if="${status != null and status.complete}" class="badge text-bg-success" th:text="#{admin.daily.fileOk}">OK (canción completa)</span>
+                                <span th:unless="${status != null and status.complete}" class="badge text-bg-warning text-dark" th:text="#{admin.daily.filePending}">Pendiente en canción</span>
                             </td>
                             <td>
                                 <form th:action="@{'/admin/song-layer/' + ${layer.id} + '/audio'}" method="post" enctype="multipart/form-data" class="d-flex gap-2">

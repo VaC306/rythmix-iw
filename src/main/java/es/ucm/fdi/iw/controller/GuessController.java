@@ -74,12 +74,36 @@ public class GuessController {
     log.debug("Acceso a GET /guess por usuario={}", u != null ? u.getId() : "anon");
 
     DailyGame dg = getOrCreateDaily(LocalDate.now());
-    Song song = dg.getSong();
-    List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
+    Song song = dg != null ? dg.getSong() : null;
+    List<SongLayer> layers = song != null ? layerRepo.findBySongOrderByIdxAsc(song) : List.of();
+    boolean dailyAvailable = dg != null && hasAllAvailableAudio(layers);
 
-    if (layers.isEmpty()) {
-      log.warn("La canción del daily id={} no tiene capas asociadas", song.getId());
-      model.addAttribute("msg", "No hay capas para la canción del día. Revisa import.sql 🙂");
+    if (!dailyAvailable) {
+      if (song != null) {
+        log.warn("Daily {} no disponible para songId={} por capas incompletas o audios ausentes",
+            dg.getId(), song.getId());
+      } else {
+        log.warn("No hay canciones válidas con todas las capas de audio disponibles para crear daily");
+      }
+
+      model.addAttribute("dailyAvailable", false);
+      model.addAttribute("noAudioAvailable", true);
+      model.addAttribute("finished", true);
+      model.addAttribute("success", false);
+      model.addAttribute("songList", availableSongs());
+
+      Object msg = session.getAttribute("guessMsg");
+      if (msg != null) {
+        model.addAttribute("msg", msg.toString());
+        session.removeAttribute("guessMsg");
+      } else {
+        model.addAttribute("msg", "guess.noAudioAdmin");
+      }
+
+      if (u == null) {
+        model.addAttribute("loginWarning", true);
+      }
+
       return "guess";
     }
 
@@ -104,13 +128,10 @@ public class GuessController {
     model.addAttribute("maxLayer", layers.size() - 1);
     model.addAttribute("tries", tries);
     model.addAttribute("maxTries", dg.getMaxTries());
-    boolean hasAnyAudio = hasAnyAvailableAudio(layers);
-    if (!hasAnyAudio) {
-      log.warn("Daily {} sin audios disponibles para songId={}", dg.getId(), song.getId());
-    }
-    model.addAttribute("finished", finished || !hasAnyAudio);
+    model.addAttribute("dailyAvailable", true);
+    model.addAttribute("finished", finished);
     model.addAttribute("success", success);
-    model.addAttribute("noAudioAvailable", !hasAnyAudio);
+    model.addAttribute("noAudioAvailable", false);
 
     Object msg = session.getAttribute("guessMsg");
     if (msg != null) {
@@ -124,7 +145,7 @@ public class GuessController {
       model.addAttribute("loginWarning", true);
     }
 
-    model.addAttribute("songList", songRepo.findAll());
+    model.addAttribute("songList", availableSongs());
     return "guess";
   }
 
@@ -141,8 +162,12 @@ public class GuessController {
     }
 
     DailyGame dg = getOrCreateDaily(LocalDate.now());
+    if (dg == null) {
+      session.setAttribute("guessMsg", "guess.noAudioAdmin");
+      return "redirect:/guess";
+    }
     List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(dg.getSong());
-    if (!hasAnyAvailableAudio(layers)) {
+    if (!hasAllAvailableAudio(layers)) {
       log.info("Usuario {} intentó navegar capas sin audios disponibles en daily={}", u.getId(), dg.getId());
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
       return "redirect:/guess";
@@ -223,9 +248,13 @@ public class GuessController {
     }
 
     DailyGame dg = getOrCreateDaily(LocalDate.now());
+    if (dg == null) {
+      session.setAttribute("guessMsg", "guess.noAudioAdmin");
+      return "redirect:/guess";
+    }
     Song song = dg.getSong();
     List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
-    if (!hasAnyAvailableAudio(layers)) {
+    if (!hasAllAvailableAudio(layers)) {
       log.info("Usuario {} intentó enviar respuesta sin audios disponibles en daily={}", u.getId(), dg.getId());
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
       return "redirect:/guess";
@@ -262,17 +291,16 @@ public class GuessController {
       int newLayer = Math.min(at.getCurrentLayer() + 1, maxLayer);
       at.setCurrentLayer(newLayer);
 
-      updateScore(u, false, 0);
-
       if (at.getTries() >= dg.getMaxTries()) {
-        log.info("Usuario {} agotó sus intentos en daily={}. Canción correcta: {} - {}",
+        updateScore(u, false, 0);
+        log.info("Usuario {} agotó sus intentos en daily={}. Derrota final. Canción correcta: {} - {}",
             u.getId(), dg.getId(), song.getTitle(), song.getArtist());
         session.setAttribute("guessMsg", "❌ Sin intentos. Era: " + song.getTitle() + " - " + song.getArtist());
       } else if (newLayer == maxLayer) {
-        log.debug("Usuario {} falló en daily={} y desbloqueó la última capa", u.getId(), dg.getId());
+        log.debug("Usuario {} tuvo fallo intermedio en daily={} y desbloqueó la última capa", u.getId(), dg.getId());
         session.setAttribute("guessMsg", "Fallaste. Última capa desbloqueada");
       } else {
-        log.debug("Usuario {} falló en daily={} y avanzó a la capa {}", u.getId(), dg.getId(), newLayer);
+        log.debug("Usuario {} tuvo fallo intermedio en daily={} y avanzó a la capa {}", u.getId(), dg.getId(), newLayer);
         session.setAttribute("guessMsg", "Fallaste. Siguiente capa desbloqueada");
       }
     }
@@ -298,10 +326,10 @@ public class GuessController {
 
   private DailyGame getOrCreateDaily(LocalDate today) {
     return dailyRepo.findByGameDay(today).orElseGet(() -> {
-      List<Song> songs = songRepo.findAll();
+      List<Song> songs = availableSongs();
       if (songs.isEmpty()) {
-        log.error("No se puede crear el daily para {} porque no hay canciones en BD", today);
-        throw new IllegalStateException("No hay canciones en BD");
+        log.error("No se puede crear el daily para {}: ninguna canción tiene todas sus capas mp3 disponibles", today);
+        return null;
       }
 
       Song chosen = songs.get(ThreadLocalRandom.current().nextInt(songs.size()));
@@ -346,16 +374,30 @@ public class GuessController {
   }
 
   private int calcPoints(DailyGame dg, Attempt at, int maxLayer) {
-    int layerPenalty = at.getCurrentLayer();
-    int tryPenalty = at.getTries() * 2;
-    int base = 10;
+    final int minPoints = 20;
+    final int maxPoints = 100;
+    final double layerWeight = 0.35;
+    final double triesWeight = 0.65;
 
-    int points = Math.max(1, base - layerPenalty - tryPenalty);
+    int usedLayer = clamp(at.getCurrentLayer(), 0, Math.max(0, maxLayer));
+    int usedTries = clamp(at.getTries(), 0, Math.max(0, dg.getMaxTries()));
 
-    log.debug("Cálculo de puntos para daily={}: base={}, layerPenalty={}, tryPenalty={}, result={}",
-        dg.getId(), base, layerPenalty, tryPenalty, points);
+    double layerPenalty = maxLayer == 0 ? 0 : (double) usedLayer / maxLayer;
+    double triesPenalty = dg.getMaxTries() == 0 ? 0 : (double) usedTries / dg.getMaxTries();
+    double totalPenalty = (layerPenalty * layerWeight) + (triesPenalty * triesWeight);
+    totalPenalty = Math.max(0, Math.min(1, totalPenalty));
 
-    return points;
+    int basePoints = (int) Math.round(maxPoints - ((maxPoints - minPoints) * totalPenalty));
+
+    int difficulty = dg.getSong() == null ? 1 : dg.getSong().getDifficulty();
+    int normalizedDifficulty = clamp(difficulty, 1, 4);
+    int bonusPct = (normalizedDifficulty - 1) * 10;
+    int finalPoints = (int) Math.round(basePoints * (1 + bonusPct / 100.0));
+
+    log.debug("Puntos daily={}: layerPenalty={}, triesPenalty={}, totalPenalty={}, basePoints={}, difficulty={}, bonusPct={}, finalPoints={}",
+        dg.getId(), layerPenalty, triesPenalty, totalPenalty, basePoints, normalizedDifficulty, bonusPct, finalPoints);
+
+    return Math.max(minPoints, finalPoints);
   }
 
   private static int clamp(int v, int min, int max) {
@@ -366,13 +408,27 @@ public class GuessController {
     return s == null ? "" : s.trim().toLowerCase();
   }
 
-  private boolean hasAnyAvailableAudio(List<SongLayer> layers) {
+  private List<Song> availableSongs() {
+    return songRepo.findAll().stream()
+        .filter(this::songHasAllLayersAvailable)
+        .toList();
+  }
+
+  private boolean songHasAllLayersAvailable(Song song) {
+    List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
+    return hasAllAvailableAudio(layers);
+  }
+
+  private boolean hasAllAvailableAudio(List<SongLayer> layers) {
+    if (layers.isEmpty()) {
+      return false;
+    }
     for (SongLayer layer : layers) {
-      if (isAudioAvailable(layer)) {
-        return true;
+      if (!isAudioAvailable(layer)) {
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
   private boolean isAudioAvailable(SongLayer layer) {
