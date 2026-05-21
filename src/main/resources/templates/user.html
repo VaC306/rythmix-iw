@@ -10,6 +10,7 @@
     <header th:replace="~{fragments/nav.html :: nav}"></header>
 
     <main class="flex-shrink-0">
+        <!--
         <div id="books" class="border border-2 border-primary rounded">
             <label for="isbn">ISBN</label><input id="isbn" value="9780140328721" />
             <button id="fetchBook">Buscar datos online</button>
@@ -32,15 +33,15 @@
             <form th:action="@{/user/__${user.id}__/pic}">
                 <button id="postAvatar">Usar como foto de perfil</button>
             </form>
-        </div>
+        </div>-->
 
         <div class="container">
             <h1 class="mt-5">Perfil de <span th:text="${user.username}">Paco</span></h1>
             <!-- recepción de mensajes -->
-            <div class="py-5 row" id="mensajes">
+            <div class="py-1 row" id="mensajes">
             </div>
             <!-- envío de mensajes -->
-            <div class="py-5 row ">
+            <div class="py-1 row ">
                 <form th:action="@{/user/__${user.id}__/msg}" method="POST">
                     <input type="text" id="message" placeholder="escribe a este usuario" />
                     <button id="sendmsg" class="btn btn-secondary" type="submit">Enviar</button>
