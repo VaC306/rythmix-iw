@@ -59,7 +59,3 @@ iw.log
 
 #MacOS
 .DS_Store
-
-#clean github repo
-src/main/resources/static/music/
-*.mp3
