@@ -1,23 +1,5 @@
 package es.ucm.fdi.iw.controller;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import es.ucm.fdi.iw.auxiliar.AuditHelper;
 import es.ucm.fdi.iw.auxiliar.GameUtils;
 import es.ucm.fdi.iw.model.ContinueGame;
@@ -34,13 +16,30 @@ import es.ucm.fdi.iw.repository.MIDISequenceRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
-
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller()
 @RequestMapping("/continue")
 public class ContinueGameController {
 
-    private static final Logger log = LogManager.getLogger(ContinueGameController.class);
+    private static final Logger log = LogManager.getLogger(
+        ContinueGameController.class
+    );
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
@@ -55,7 +54,11 @@ public class ContinueGameController {
     private final MIDISequenceRepository midiSequenceRepository;
     private final MIDIInstrumentRepository midiInstrumentRepository;
 
-    public ContinueGameController(MIDIGameRepository midiGameRepository, MIDISequenceRepository midiSequenceRepository, MIDIInstrumentRepository midiInstrumentRepository) {
+    public ContinueGameController(
+        MIDIGameRepository midiGameRepository,
+        MIDISequenceRepository midiSequenceRepository,
+        MIDIInstrumentRepository midiInstrumentRepository
+    ) {
         this.midiSequenceRepository = midiSequenceRepository;
         this.midiGameRepository = midiGameRepository;
         this.midiInstrumentRepository = midiInstrumentRepository;
@@ -63,15 +66,18 @@ public class ContinueGameController {
 
     @ModelAttribute
     public void populateModel(HttpSession session, Model model) {
-        for (String name : new String[] { "u", "url", "ws", "topics"}) {
-          model.addAttribute(name, session.getAttribute(name));
+        for (String name : new String[] { "u", "url", "ws", "topics" }) {
+            model.addAttribute(name, session.getAttribute(name));
         }
         model.addAttribute("gameMode", "continue");
         model.addAttribute("gameName", "Continuacion de Cancion");
     }
 
     @ModelAttribute
-    public void populateLobbyModel(@PathVariable(required = false) String lobbyCode, Model model) {
+    public void populateLobbyModel(
+        @PathVariable(required = false) String lobbyCode,
+        Model model
+    ) {
         if (lobbyCode != null) {
             model.addAttribute("lobbyCode", lobbyCode);
         }
@@ -85,7 +91,8 @@ public class ContinueGameController {
 
     @PostMapping("/lobby/create")
     @Transactional
-    public String createLobby(HttpSession session, Model model) throws IOException {
+    public String createLobby(HttpSession session, Model model)
+        throws IOException {
         User u = (User) session.getAttribute("u");
         if (u == null) {
             log.warn("Attempt to create lobby without being logged in");
@@ -125,7 +132,11 @@ public class ContinueGameController {
     }
 
     @GetMapping("/lobby/{lobbyCode}")
-    public String getLobby(HttpSession session, @PathVariable String lobbyCode, Model model) {
+    public String getLobby(
+        HttpSession session,
+        @PathVariable String lobbyCode,
+        Model model
+    ) {
         User u = (User) session.getAttribute("u");
         if (u == null) {
             model.addAttribute("showError", true);
@@ -134,42 +145,77 @@ public class ContinueGameController {
             return "lobby";
         }
 
-        Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(lobbyCode);
-        if (optGame.isEmpty()  || !(optGame.get() instanceof ContinueGame)) {
+        Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(
+            lobbyCode
+        );
+        if (optGame.isEmpty() || !(optGame.get() instanceof ContinueGame)) {
             log.warn("Lobby not found for code {}", lobbyCode);
             model.addAttribute("showError", true);
             model.addAttribute("errorTitleKey", "lobby.error.notfound.title");
             model.addAttribute("errorBodyKey", "lobby.error.notfound.body");
             return "lobby";
         }
-        ContinueGame game = (ContinueGame)optGame.get();
-        if (!game.getPlayers().stream().anyMatch(lu->lu.getId() == u.getId())){
+        ContinueGame game = (ContinueGame) optGame.get();
+        if (
+            !game
+                .getPlayers()
+                .stream()
+                .anyMatch(lu -> lu.getId() == u.getId())
+        ) {
             model.addAttribute("showError", true);
             model.addAttribute("errorTitleKey", "lobby.error.notjoined.title");
             model.addAttribute("errorBodyKey", "lobby.error.notjoined.body");
             return "lobby";
         }
 
-        log.debug("User {} accessing lobby {}", u == null ? "anonymous" : u.getUsername(), lobbyCode);
-        if(game.getCurrentRound() == game.getTotalRounds()){
+        log.debug(
+            "User {} accessing lobby {}",
+            u == null ? "anonymous" : u.getUsername(),
+            lobbyCode
+        );
+        if (game.getCurrentRound() == game.getTotalRounds()) {
             game.setStatus(ContinueGameStatus.FINISHED);
             midiGameRepository.save(game);
         } else {
-            model.addAttribute("instrument", game.getRoundInstruments().get(game.getCurrentRound()));
+            model.addAttribute(
+                "instrument",
+                game.getRoundInstruments().get(game.getCurrentRound())
+            );
         }
         model.addAttribute("isOwner", game.getOwner().getId() == u.getId());
         model.addAttribute("isAdmin", u.hasRole(User.Role.ADMIN));
         model.addAttribute("currentRound", game.getCurrentRound());
         model.addAttribute("totalRounds", game.getTotalRounds());
         model.addAttribute("gameStatus", game.getStatus());
-        model.addAttribute("playerList", game.getPlayers().stream().map((p)->new PlayerInfo(p.getId(),p.getUsername(), game.getOwner().getId() == p.getId())).toList());
-        log.info("Lobby {} has {} players", lobbyCode, game.getPlayers().size());
+        model.addAttribute(
+            "playerList",
+            game
+                .getPlayers()
+                .stream()
+                .map(p ->
+                    new PlayerInfo(
+                        p.getId(),
+                        p.getUsername(),
+                        game.getOwner().getId() == p.getId()
+                    )
+                )
+                .toList()
+        );
+        log.info(
+            "Lobby {} has {} players",
+            lobbyCode,
+            game.getPlayers().size()
+        );
         return "continue";
     }
 
     @PostMapping("/lobby/join")
     @Transactional
-    public String joinLobby(HttpSession session, @RequestParam String lobbyCode, Model model) throws IOException {
+    public String joinLobby(
+        HttpSession session,
+        @RequestParam String lobbyCode,
+        Model model
+    ) throws IOException {
         User u = (User) session.getAttribute("u");
         if (u == null) {
             log.warn("Unauthorized user tried to join lobby {}", lobbyCode);
@@ -179,11 +225,21 @@ public class ContinueGameController {
             return "lobby";
         }
 
-        auditHelper.log(u, "JOINED_LOBBY", "Se ha unido a la sala con id de sala: " + lobbyCode);
+        auditHelper.log(
+            u,
+            "JOINED_LOBBY",
+            "Se ha unido a la sala con id de sala: " + lobbyCode
+        );
 
-        Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(lobbyCode);
-        if (optGame.isEmpty()  || !(optGame.get() instanceof ContinueGame)) {
-            log.warn("User {} tried to join missing lobby {}", u.getUsername(), lobbyCode);
+        Optional<MIDIGame> optGame = midiGameRepository.findByLobbyCode(
+            lobbyCode
+        );
+        if (optGame.isEmpty() || !(optGame.get() instanceof ContinueGame)) {
+            log.warn(
+                "User {} tried to join missing lobby {}",
+                u.getUsername(),
+                lobbyCode
+            );
             model.addAttribute("showError", true);
             model.addAttribute("errorTitleKey", "lobby.error.notfound.title");
             model.addAttribute("errorBodyKey", "lobby.error.notfound.body");
@@ -193,23 +249,56 @@ public class ContinueGameController {
         log.info("User {} joining lobby {}", u.getUsername(), lobbyCode);
         game.addPlayer(u);
 
-        Topic lobbyTopic = entityManager.createNamedQuery("Topic.byKey", Topic.class)
-                .setParameter("key", "lobby-" + lobbyCode).getSingleResult();
+        Topic lobbyTopic = entityManager
+            .createNamedQuery("Topic.byKey", Topic.class)
+            .setParameter("key", "lobby-" + lobbyCode)
+            .getSingleResult();
         lobbyTopic.getMembers().add(u);
 
-        GameUpdate up = new GameUpdate("PLAYERSUPDATED",
-                game.getPlayers().stream()
-                        .map((p) -> new PlayerInfo(p.getId(), p.getUsername(), game.getOwner().getId() == p.getId())).toList());
-        messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode, up);
+        GameUpdate up = new GameUpdate(
+            "PLAYERSUPDATED",
+            game
+                .getPlayers()
+                .stream()
+                .map(p ->
+                    new PlayerInfo(
+                        p.getId(),
+                        p.getUsername(),
+                        game.getOwner().getId() == p.getId()
+                    )
+                )
+                .toList()
+        );
+        messagingTemplate.convertAndSend(
+            "/topic/continue/lobby/" + lobbyCode,
+            up
+        );
         return "redirect:/continue/lobby/" + lobbyCode;
     }
 
     public record GameUpdate(String type, Object data) {}
-    public record UserRequest(long userId) {} 
-    public record GameStartRequest(long userId, int totalRounds, List<Integer> roundInstruments) {} 
-    public record TrackSubmission(long userId, MIDITrack.Transfer track) {}
-    public record RoundData(MIDIInstrument.Transfer instrumentData, MIDISequence.Transfer sequence) {}
-    public record GameData(int currentRound, int totalRounds, String status, RoundData roundData) {}
-    public record PlayerInfo(Long id, String username, boolean isOwner) {}
 
+    public record UserRequest(long userId) {}
+
+    public record GameStartRequest(
+        long userId,
+        int totalRounds,
+        List<Integer> roundInstruments
+    ) {}
+
+    public record TrackSubmission(long userId, MIDITrack.Transfer track) {}
+
+    public record RoundData(
+        MIDIInstrument.Transfer instrumentData,
+        MIDISequence.Transfer sequence
+    ) {}
+
+    public record GameData(
+        int currentRound,
+        int totalRounds,
+        String status,
+        RoundData roundData
+    ) {}
+
+    public record PlayerInfo(Long id, String username, boolean isOwner) {}
 }
