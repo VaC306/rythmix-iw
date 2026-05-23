@@ -1,18 +1,18 @@
 package es.ucm.fdi.iw.model;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Data
 @NoArgsConstructor
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE) 
-@DiscriminatorColumn(name = "gametype") 
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "gametype")
 public class MIDIGame {
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "gen")
     @SequenceGenerator(name = "gen", sequenceName = "gen")
@@ -28,7 +28,11 @@ public class MIDIGame {
     )
     protected List<User> players = new ArrayList<>();
 
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+        mappedBy = "game",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
     protected List<MIDISequence> sequences;
 
     @ManyToOne

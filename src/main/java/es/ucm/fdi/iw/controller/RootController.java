@@ -44,7 +44,7 @@ public class RootController {
 
     @ModelAttribute
     public void populateModel(HttpSession session, Model model) {
-        for (String name : new String[] {"u", "url", "ws", "topics"}) {
+        for (String name : new String[] { "u", "url", "ws", "topics" }) {
             model.addAttribute(name, session.getAttribute(name));
         }
     }
@@ -157,7 +157,21 @@ public class RootController {
     }*/
 
     @GetMapping("/games")
-    public String games() {
+    public String games(Model model, HttpSession session) {
+        User u = (User) session.getAttribute("u");
+        if (u == null) {
+            log.warn("Attempt to enter games page without being logged in");
+            model.addAttribute("showError", true);
+            model.addAttribute(
+                "errorTitleKey",
+                "lobby.error.notlogged.index.title"
+            );
+            model.addAttribute(
+                "errorBodyKey",
+                "lobby.error.notlogged.index.body"
+            );
+            return "index";
+        }
         return "games";
     }
 
