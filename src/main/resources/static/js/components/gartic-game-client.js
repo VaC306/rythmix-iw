@@ -64,6 +64,7 @@ function handleMessage(m) {
       ended = true;
       showScreen(selectors.endScreenTemplate);
       setupEndScreen();
+      break;
     case "KICKED":
       window.location.href = "/";
       break;
