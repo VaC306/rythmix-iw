@@ -34,7 +34,9 @@ function subscribeWhenReady(lobbyCode) {
   const interval = setInterval(() => {
     if (ws.stompClient && ws.stompClient.connected) {
       try {
-        ws.stompClient.subscribe("/topic/gartic/lobby/" + lobbyCode, (m) => handleMessage(JSON.parse(m.body)));
+        ws.stompClient.subscribe("/topic/gartic/lobby/" + lobbyCode, (m) =>
+          handleMessage(JSON.parse(m.body)),
+        );
         console.log("Hopefully subscribed to topic and queue");
       } catch (e) {
         console.log("Error, could not subscribe", e);
@@ -74,15 +76,17 @@ function handleMessage(m) {
 function updatePlayers(list) {
   console.log("Updating players...");
   document.querySelector(selectors.playerList).innerHTML = "";
-  document.querySelectorAll(selectors.playerCounter).forEach((el) => (el.textContent = list.length));
+  document
+    .querySelectorAll(selectors.playerCounter)
+    .forEach((el) => (el.textContent = list.length));
   const ownerBadge = `<span class="badge bg-warning text-dark">Owner</span>`;
   list.forEach((player) => {
-    let kickButton = '';
+    let kickButton = "";
     if (isOwner && !player.isOwner)
       kickButton = `<button onclick="kickPlayer('${player.username}')" class="btn btn-sm btn-danger">Kick</button>`;
     const html = `
     <div class="list-group-item d-flex bg-transparent align-items-center">
-      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
             style="width: 40px; height: 40px;">
           <span>${player.username.substring(0, 1)}</span>
       </div>
@@ -91,7 +95,9 @@ function updatePlayers(list) {
       ${kickButton}
     </div>
     `;
-    document.querySelector(selectors.playerList).insertAdjacentHTML("beforeend", html);
+    document
+      .querySelector(selectors.playerList)
+      .insertAdjacentHTML("beforeend", html);
   });
 }
 
@@ -107,15 +113,26 @@ function showScreen(selector) {
 function sendStartRequest() {
   console.log("Sending start request...");
   let body = {
-    totalRounds: parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
+    totalRounds: parseInt(
+      document.querySelector(selectors.numberOfRoundsSelector).value,
+    ),
     roundInstruments: [],
   };
   for (let i = 0; i < body.totalRounds; i++)
-    body.roundInstruments.push(parseInt(document.querySelector(`#select-instrument-round-${i}`).value));
-  console.log({ method: "POST", "X-CSRF-TOKEN": config.csrf.value, body: body });
+    body.roundInstruments.push(
+      parseInt(document.querySelector(`#select-instrument-round-${i}`).value),
+    );
+  console.log({
+    method: "POST",
+    "X-CSRF-TOKEN": config.csrf.value,
+    body: body,
+  });
   fetch(`/api/gartic/lobby/${lobbyCode}/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-CSRF-TOKEN": config.csrf.value,
+    },
     body: JSON.stringify(body),
   }).then((r) => {
     if (r.ok) console.log("Start request sent correctly");
@@ -130,10 +147,14 @@ function sendTrack() {
   console.log("Sending created track...");
   fetch(`/api/gartic/lobby/${lobbyCode}/track/post`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-CSRF-TOKEN": config.csrf.value,
+    },
     body: JSON.stringify(pianoRoll.getEditableTrack()),
   }).then((r) => {
-    if (r.ok && waitingForNewRound && !ended) showScreen(selectors.trackSentTemplate);
+    if (r.ok && waitingForNewRound && !ended)
+      showScreen(selectors.trackSentTemplate);
     else {
       console.log(r.status);
     }
@@ -144,12 +165,17 @@ async function setupPianoRoll(selectors) {
   const sequence = gameData.roundData.sequence;
   const instrumentData = gameData.roundData.instrumentData;
   pianoRoll = new PianoRoll({ instrument: instrumentData.program });
-  pianoRoll.createVisualElement(selectors.pianoRollContainer, instrumentData.notes);
+  pianoRoll.createVisualElement(
+    selectors.pianoRollContainer,
+    instrumentData.notes,
+  );
   pianoRoll.setFixedTracks(sequence.tracks);
   pianoRoll.bindControls(selectors);
-  document.querySelector(selectors.sendButton).addEventListener("click", async (e) => {
-    sendTrack();
-  });
+  document
+    .querySelector(selectors.sendButton)
+    .addEventListener("click", async (e) => {
+      sendTrack();
+    });
 }
 
 async function showInstructionsModal(selectors) {
@@ -158,7 +184,9 @@ async function showInstructionsModal(selectors) {
     `Ronda ${gameData.currentRound + 1} de ${gameData.totalRounds}`;
   document.querySelector(selectors.instructionsModalBody).textContent =
     `Crea una pista de ${instrumentData.instrumentName} para la canción!`;
-  const bsModal = new bootstrap.Modal(document.querySelector(selectors.instructionsModal));
+  const bsModal = new bootstrap.Modal(
+    document.querySelector(selectors.instructionsModal),
+  );
   bsModal.show();
 }
 
@@ -174,19 +202,31 @@ function setupWaitingRoom() {
           });
       });
     } else createInstrumentSelects();
-    document.querySelector(selectors.numberOfRoundsSelector).addEventListener("change", () => {
-      createInstrumentSelects();
-    });
+    document
+      .querySelector(selectors.numberOfRoundsSelector)
+      .addEventListener("change", () => {
+        createInstrumentSelects();
+      });
   }
 }
 
 function createInstrumentSelects() {
-  console.log("dasfkjnl", parseInt(document.querySelector(selectors.numberOfRoundsSelector).value));
+  console.log(
+    "dasfkjnl",
+    parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
+  );
   document.querySelector(selectors.instrumentSelectContainer).innerHTML = "";
-  for (let i = 0; i < parseInt(document.querySelector(selectors.numberOfRoundsSelector).value); i++) {
-    document.querySelector(selectors.instrumentSelectContainer).insertAdjacentHTML(
-      "beforeend",
-      `
+  for (
+    let i = 0;
+    i <
+    parseInt(document.querySelector(selectors.numberOfRoundsSelector).value);
+    i++
+  ) {
+    document
+      .querySelector(selectors.instrumentSelectContainer)
+      .insertAdjacentHTML(
+        "beforeend",
+        `
       <div class="mb-3 form-floating">
         <select id="select-instrument-round-${i}" class="form-select">
           ${"".concat(
@@ -203,17 +243,20 @@ function createInstrumentSelects() {
         <label for="select-instrument-round-${i}" class="form-label">Ronda ${i + 1}</label>
       </div>
       `,
-    );
+      );
   }
 }
 
 async function getRoundSequence(retries = 5) {
   let delay = 500;
   for (let i = 0; i < retries; i++) {
-    const r = await fetch(`/api/gartic/lobby/${lobbyCode}/sequence/get?currentRound=${gameData.currentRound}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
+    const r = await fetch(
+      `/api/gartic/lobby/${lobbyCode}/sequence/get?currentRound=${gameData.currentRound}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+      },
+    );
     if (r.ok) return r.json();
     if (r.status != 409) return null;
     console.log(`Retrying in ${delay}ms`);
@@ -249,7 +292,7 @@ function createCardHTML(params) {
         <div class="flex-grow-1">
           <input id="${params.progressBarId}" type="range" class="form-range">
         </div>
-        <div class="ms-5">                        
+        <div class="ms-5">
           <div class="btn-group" role="group">
             <button id="${params.playButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.play}">
               <i class="bi bi-play-fill"></i>
@@ -274,17 +317,19 @@ function createCardHTML(params) {
 
 function setupCards(sequences) {
   for (let i in sequences) {
-    document.querySelector(selectors.endScreenCardsContainer).insertAdjacentHTML(
-      "beforeend",
-      createCardHTML({
-        progressBarId: `progressBarEnd${i}`,
-        playButtonId: `playButtonEnd${i}`,
-        pauseButtonId: `pauseButtonEnd${i}`,
-        stopButtonId: `stopButtonEnd${i}`,
-        saveButtonId: `saveButtonEnd${i}`,
-        midiSequenceId: sequences[i].id,
-      }),
-    );
+    document
+      .querySelector(selectors.endScreenCardsContainer)
+      .insertAdjacentHTML(
+        "beforeend",
+        createCardHTML({
+          progressBarId: `progressBarEnd${i}`,
+          playButtonId: `playButtonEnd${i}`,
+          pauseButtonId: `pauseButtonEnd${i}`,
+          stopButtonId: `stopButtonEnd${i}`,
+          saveButtonId: `saveButtonEnd${i}`,
+          midiSequenceId: sequences[i].id,
+        }),
+      );
     let pr = new PianoRoll({});
     pr.setFixedTracks(sequences[i].tracks);
     pr.bindControls({
@@ -326,16 +371,16 @@ async function setupEndScreen() {
   setupCards(sequences);
 }
 
-function kickPlayer(username){
-  fetch(`/gartic/lobby/${lobbyCode}/kick/${username}`,{
-    method: "POST", headers: {"X-CSRF-TOKEN": config.csrf.value}
+function kickPlayer(username) {
+  fetch(`/gartic/lobby/${lobbyCode}/kick/${username}`, {
+    method: "POST",
+    headers: { "X-CSRF-TOKEN": config.csrf.value },
   });
 }
 
 document.addEventListener("DOMContentLoaded", (e) => {
   ws.receive = (msg) => {
-    if (msg?.type === "KICKED") 
-      window.location.href="/";
+    if (msg?.type === "KICKED") window.location.href = "/";
   };
   subscribeWhenReady(lobbyCode);
   if (initialGameStatus == "WAITING") {

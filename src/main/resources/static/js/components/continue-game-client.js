@@ -42,7 +42,9 @@ function subscribeWhenReady(lobbyCode) {
   const interval = setInterval(() => {
     if (ws.stompClient && ws.stompClient.connected) {
       try {
-        ws.stompClient.subscribe("/topic/continue/lobby/" + lobbyCode, (m) => handleMessage(JSON.parse(m.body)));
+        ws.stompClient.subscribe("/topic/continue/lobby/" + lobbyCode, (m) =>
+          handleMessage(JSON.parse(m.body)),
+        );
         console.log("Hopefully subscribed to topic and queue");
       } catch (e) {
         console.log("Error, could not subscribe", e);
@@ -60,7 +62,7 @@ function handleMessage(m) {
       break;
     case "GAMESTARTED":
     case "NEWROUND":
-        playing = true;
+      playing = true;
       votingStarted = false;
       voteSubmitted = false;
       showScreen(selectors.gameScreenTemplate);
@@ -71,7 +73,7 @@ function handleMessage(m) {
       showScreen(selectors.trackSentTemplate);
       break;
     case "GAMEENDED":
-        ended=true;
+      ended = true;
       showScreen(selectors.endScreenTemplate);
       setupEndScreen(m.data);
       break;
@@ -91,12 +93,14 @@ function updatePlayers(list) {
   console.log("Updating players...");
   playerCount = list.length;
   document.querySelector(selectors.playerList).innerHTML = "";
-  document.querySelectorAll(selectors.playerCounter).forEach((el) => (el.textContent = list.length));
+  document
+    .querySelectorAll(selectors.playerCounter)
+    .forEach((el) => (el.textContent = list.length));
   const ownerBadge = `<span class="badge bg-warning text-dark">Owner</span>`;
   list.forEach((player) => {
     const html = `
     <div class="list-group-item d-flex bg-transparent align-items-center">
-      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+      <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
             style="width: 40px; height: 40px;">
           <span>${player.username.substring(0, 1)}</span>
       </div>
@@ -104,7 +108,9 @@ function updatePlayers(list) {
       ${player.isOwner ? ownerBadge : ""}
     </div>
     `;
-    document.querySelector(selectors.playerList).insertAdjacentHTML("beforeend", html);
+    document
+      .querySelector(selectors.playerList)
+      .insertAdjacentHTML("beforeend", html);
   });
 }
 
@@ -120,15 +126,26 @@ function showScreen(selector) {
 function sendStartRequest() {
   console.log("Sending start request...");
   let body = {
-    totalRounds: parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
+    totalRounds: parseInt(
+      document.querySelector(selectors.numberOfRoundsSelector).value,
+    ),
     roundInstruments: [],
   };
   for (let i = 0; i < body.totalRounds; i++)
-    body.roundInstruments.push(parseInt(document.querySelector(`#select-instrument-round-${i}`).value));
-  console.log({ method: "POST", "X-CSRF-TOKEN": config.csrf.value, body: body });
+    body.roundInstruments.push(
+      parseInt(document.querySelector(`#select-instrument-round-${i}`).value),
+    );
+  console.log({
+    method: "POST",
+    "X-CSRF-TOKEN": config.csrf.value,
+    body: body,
+  });
   fetch(`/api/continue/lobby/${lobbyCode}/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-CSRF-TOKEN": config.csrf.value,
+    },
     body: JSON.stringify(body),
   }).then((r) => {
     if (r.ok) console.log("Start request sent correctly");
@@ -139,11 +156,14 @@ function sendStartRequest() {
 }
 
 function sendTrack() {
-    playing = false;
+  playing = false;
   console.log("Sending created track...");
   fetch(`/api/continue/lobby/${lobbyCode}/track/post`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-CSRF-TOKEN": config.csrf.value,
+    },
     body: JSON.stringify(pianoRoll.getEditableTrack()),
   }).then((r) => {
     if (r.ok && !votingStarted) showScreen(selectors.trackSentTemplate);
@@ -156,12 +176,17 @@ async function setupPianoRoll(selectors) {
   const sequence = gameData.roundData.sequence;
   const instrumentData = gameData.roundData.instrumentData;
   pianoRoll = new PianoRoll({ instrument: instrumentData.program });
-  pianoRoll.createVisualElement(selectors.pianoRollContainer, instrumentData.notes);
+  pianoRoll.createVisualElement(
+    selectors.pianoRollContainer,
+    instrumentData.notes,
+  );
   pianoRoll.setFixedTracks(sequence.tracks);
   pianoRoll.bindControls(selectors);
-  document.querySelector(selectors.sendButton).addEventListener("click", async (e) => {
-    sendTrack();
-  });
+  document
+    .querySelector(selectors.sendButton)
+    .addEventListener("click", async (e) => {
+      sendTrack();
+    });
 }
 
 async function showInstructionsModal(selectors) {
@@ -170,7 +195,9 @@ async function showInstructionsModal(selectors) {
     `Ronda ${gameData.currentRound + 1} de ${gameData.totalRounds}`;
   document.querySelector(selectors.instructionsModalBody).textContent =
     `Crea una pista de ${instrumentData.instrumentName} para la canción!`;
-  const bsModal = new bootstrap.Modal(document.querySelector(selectors.instructionsModal));
+  const bsModal = new bootstrap.Modal(
+    document.querySelector(selectors.instructionsModal),
+  );
   bsModal.show();
 }
 
@@ -186,19 +213,31 @@ function setupWaitingRoom() {
           });
       });
     } else createInstrumentSelects();
-    document.querySelector(selectors.numberOfRoundsSelector).addEventListener("change", () => {
-      createInstrumentSelects();
-    });
+    document
+      .querySelector(selectors.numberOfRoundsSelector)
+      .addEventListener("change", () => {
+        createInstrumentSelects();
+      });
   }
 }
 
 function createInstrumentSelects() {
-  console.log("dasfkjnl", parseInt(document.querySelector(selectors.numberOfRoundsSelector).value));
+  console.log(
+    "dasfkjnl",
+    parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
+  );
   document.querySelector(selectors.instrumentSelectContainer).innerHTML = "";
-  for (let i = 0; i < parseInt(document.querySelector(selectors.numberOfRoundsSelector).value); i++) {
-    document.querySelector(selectors.instrumentSelectContainer).insertAdjacentHTML(
-      "beforeend",
-      `
+  for (
+    let i = 0;
+    i <
+    parseInt(document.querySelector(selectors.numberOfRoundsSelector).value);
+    i++
+  ) {
+    document
+      .querySelector(selectors.instrumentSelectContainer)
+      .insertAdjacentHTML(
+        "beforeend",
+        `
       <div class="mb-3 form-floating">
         <select id="select-instrument-round-${i}" class="form-select">
           ${"".concat(
@@ -215,20 +254,23 @@ function createInstrumentSelects() {
         <label for="select-instrument-round-${i}" class="form-label">Ronda ${i + 1}</label>
       </div>
       `,
-    );
+      );
   }
 }
 
 async function getRoundSequence(retries = 5) {
   let delay = 500;
   for (let i = 0; i < retries; i++) {
-    const r = await fetch(`/api/continue/lobby/${lobbyCode}/sequence/get?currentRound=${gameData.currentRound}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
+    const r = await fetch(
+      `/api/continue/lobby/${lobbyCode}/sequence/get?currentRound=${gameData.currentRound}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+      },
+    );
     if (r.ok) return r.json();
     if (r.status != 409) return null;
-    console.log(`Retrying in ${delay}ms`)
+    console.log(`Retrying in ${delay}ms`);
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
   }
@@ -253,11 +295,11 @@ async function setupGameScreen() {
 function createCardHTML(params) {
   const html = `
     <div class="card mb-3">
-      <div class="card-body row align-items-center py-5">
-        <div class="col col-8">
+      <div class="card-body d-flex align-items-center py-5 px-5">
+        <div class="flex-grow-1">
           <input id="${params.progressBarId}" type="range" class="form-range">
         </div>
-        <div class="col col-4">                        
+        <div class="ms-5">
           <div class="btn-group" role="group">
             <button id="${params.playButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.play}">
               <i class="bi bi-play-fill"></i>
@@ -268,6 +310,10 @@ function createCardHTML(params) {
             <button id="${params.stopButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.stop}">
               <i class="bi bi-stop-fill"></i>
             </button>
+            <button id="${params.saveButtonId}" type="button" class="btn btn-outline-success"
+              onclick="saveFavoriteSong(${params.midiSequenceId}, this)">
+              <i class="bi bi-heart"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -275,18 +321,30 @@ function createCardHTML(params) {
     `;
   return html;
 }
+async function saveFavoriteSong(midiSequenceId, button) {
+  const r = await fetch(`/api/favSong/${midiSequenceId}`, { method: "POST" });
+  if (r.ok) {
+    button.classList.remove("btn-outline-success");
+    button.classList.add("btn-success");
+    button.disabled = true;
+  }
+}
 
 function setupCards(sequences) {
   for (let i in sequences) {
-    document.querySelector(selectors.endScreenCardsContainer).insertAdjacentHTML(
-      "beforeend",
-      createCardHTML({
-        progressBarId: `progressBarEnd${i}`,
-        playButtonId: `playButtonEnd${i}`,
-        pauseButtonId: `pauseButtonEnd${i}`,
-        stopButtonId: `stopButtonEnd${i}`,
-      }),
-    );
+    document
+      .querySelector(selectors.endScreenCardsContainer)
+      .insertAdjacentHTML(
+        "beforeend",
+        createCardHTML({
+          progressBarId: `progressBarEnd${i}`,
+          playButtonId: `playButtonEnd${i}`,
+          pauseButtonId: `pauseButtonEnd${i}`,
+          stopButtonId: `stopButtonEnd${i}`,
+          saveButtonId: `saveButtonEnd${i}`,
+          midiSequenceId: sequences[i].id,
+        }),
+      );
     let pr = new PianoRoll({});
     pr.setFixedTracks(sequences[i].tracks);
     pr.bindControls({
@@ -307,14 +365,14 @@ async function getAllSequences(retries = 5) {
     });
     if (r.ok) return r.json();
     if (r.status != 409) return null;
-    console.log(`Retrying in ${delay}ms`)
+    console.log(`Retrying in ${delay}ms`);
     await new Promise((res) => setTimeout(res, delay));
     delay *= 2;
   }
 }
 
 async function setupEndScreen() {
-    const finalTrack = await getAllSequences()
+  const finalTrack = await getAllSequences();
   console.log(finalTrack);
   setupCards(finalTrack ? [finalTrack] : []);
 }
@@ -328,7 +386,7 @@ function createVotingCardHTML(params) {
           <div class="col">
             <input id="${params.progressBarId}" type="range" class="form-range">
           </div>
-          <div class="col-auto">                        
+          <div class="col-auto">
             <div class="btn-group" role="group">
               <button id="${params.playButtonId}" type="button" class="btn btn-primary">
                 <i class="bi bi-play-fill"></i>
@@ -360,20 +418,22 @@ async function setupVotingScreen(data) {
     const seq = sequences[i];
     const seqId = seq.id;
     const voteCount = voteCounts[seqId] || 0;
-    document.querySelector(selectors.votingScreenCardsContainer).insertAdjacentHTML(
-      "beforeend",
-      createVotingCardHTML({
-        sequenceId: seqId,
-        playerName: seq.playerName || ("Jugador " + (parseInt(i) + 1)),
-        progressBarId: `votingProgressBar${i}`,
-        playButtonId: `votingPlayButton${i}`,
-        pauseButtonId: `votingPauseButton${i}`,
-        stopButtonId: `votingStopButton${i}`,
-        voteCountId: `votingVoteCount${i}`,
-        voteButtonId: `votingVoteButton${i}`,
-        voteCount: voteCount,
-      }),
-    );
+    document
+      .querySelector(selectors.votingScreenCardsContainer)
+      .insertAdjacentHTML(
+        "beforeend",
+        createVotingCardHTML({
+          sequenceId: seqId,
+          playerName: seq.playerName || "Jugador " + (parseInt(i) + 1),
+          progressBarId: `votingProgressBar${i}`,
+          playButtonId: `votingPlayButton${i}`,
+          pauseButtonId: `votingPauseButton${i}`,
+          stopButtonId: `votingStopButton${i}`,
+          voteCountId: `votingVoteCount${i}`,
+          voteButtonId: `votingVoteButton${i}`,
+          voteCount: voteCount,
+        }),
+      );
     let pr = new PianoRoll({});
     pr.setFixedTracks(seq.tracks);
     pr.bindControls({
@@ -382,36 +442,46 @@ async function setupVotingScreen(data) {
       stopButton: `#votingStopButton${i}`,
       progressBar: `#votingProgressBar${i}`,
     });
-    document.querySelector(`#votingVoteButton${i}`).addEventListener("click", () => {
-      document.querySelectorAll(selectors.votingScreenCardsContainer + " .card").forEach((card) => {
-        card.classList.remove("border-primary");
-        const btn = card.querySelector("button[id^='votingVoteButton']");
-        if (btn) {
-          btn.classList.remove("btn-primary");
-          btn.classList.add("btn-outline-primary");
-        }
+    document
+      .querySelector(`#votingVoteButton${i}`)
+      .addEventListener("click", () => {
+        document
+          .querySelectorAll(selectors.votingScreenCardsContainer + " .card")
+          .forEach((card) => {
+            card.classList.remove("border-primary");
+            const btn = card.querySelector("button[id^='votingVoteButton']");
+            if (btn) {
+              btn.classList.remove("btn-primary");
+              btn.classList.add("btn-outline-primary");
+            }
+          });
+        const clickedCard = document.querySelector(
+          `.card[data-sequence-id="${seqId}"]`,
+        );
+        clickedCard.classList.add("border-primary");
+        const clickedBtn = clickedCard.querySelector(`#votingVoteButton${i}`);
+        clickedBtn.classList.remove("btn-outline-primary");
+        clickedBtn.classList.add("btn-primary");
+        selectedVoteSequenceId = seqId;
+        document.querySelector(selectors.voteConfirmButton).disabled = false;
       });
-      const clickedCard = document.querySelector(`.card[data-sequence-id="${seqId}"]`);
-      clickedCard.classList.add("border-primary");
-      const clickedBtn = clickedCard.querySelector(`#votingVoteButton${i}`);
-      clickedBtn.classList.remove("btn-outline-primary");
-      clickedBtn.classList.add("btn-primary");
-      selectedVoteSequenceId = seqId;
-      document.querySelector(selectors.voteConfirmButton).disabled = false;
-    });
   }
-  document.querySelector(selectors.voteConfirmButton).addEventListener("click", () => {
-    if (selectedVoteSequenceId !== null) {
-      sendVote(selectedVoteSequenceId);
-    }
-  });
+  document
+    .querySelector(selectors.voteConfirmButton)
+    .addEventListener("click", () => {
+      if (selectedVoteSequenceId !== null) {
+        sendVote(selectedVoteSequenceId);
+      }
+    });
 }
 
 function updateVotingCounts(voteCounts) {
   for (const [sequenceId, count] of Object.entries(voteCounts)) {
-    const card = document.querySelector(`.card[data-sequence-id="${sequenceId}"]`);
+    const card = document.querySelector(
+      `.card[data-sequence-id="${sequenceId}"]`,
+    );
     if (!card) continue;
-    const voteSpan = card.querySelector('.vote-count span');
+    const voteSpan = card.querySelector(".vote-count span");
     if (voteSpan) voteSpan.textContent = count;
   }
 }
@@ -420,24 +490,33 @@ function sendVote(sequenceId) {
   console.log("Voting for sequence", sequenceId);
   fetch(`/api/continue/lobby/${lobbyCode}/vote`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "X-CSRF-TOKEN": config.csrf.value },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-CSRF-TOKEN": config.csrf.value,
+    },
     body: JSON.stringify({ sequenceId: sequenceId }),
   }).then((r) => {
     if (r.ok) {
       console.log("Vote sent");
       voteSubmitted = true;
       document.querySelector(selectors.voteConfirmButton).disabled = true;
-      document.querySelectorAll(selectors.votingScreenCardsContainer + " .card").forEach((card) => {
-        card.querySelectorAll("button[id^='votingVoteButton']").forEach((btn) => {
-          btn.disabled = true;
+      document
+        .querySelectorAll(selectors.votingScreenCardsContainer + " .card")
+        .forEach((card) => {
+          card
+            .querySelectorAll("button[id^='votingVoteButton']")
+            .forEach((btn) => {
+              btn.disabled = true;
+            });
         });
-      });
       const existingMsg = document.querySelector("#vote-waiting-message");
       if (!existingMsg) {
-        document.querySelector(selectors.votingScreenCardsContainer).insertAdjacentHTML(
-          "afterend",
-          '<div id="vote-waiting-message" class="mt-3"><h5>Esperando a los dem&aacute;s jugadores</h5></div>',
-        );
+        document
+          .querySelector(selectors.votingScreenCardsContainer)
+          .insertAdjacentHTML(
+            "afterend",
+            '<div id="vote-waiting-message" class="mt-3"><h5>Esperando a los dem&aacute;s jugadores</h5></div>',
+          );
       }
     } else {
       console.log(r.status);
