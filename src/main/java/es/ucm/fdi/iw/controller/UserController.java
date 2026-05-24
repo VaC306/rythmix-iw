@@ -4,7 +4,6 @@ import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.model.Message;
 import es.ucm.fdi.iw.model.Transferable;
 import es.ucm.fdi.iw.model.User;
-import es.ucm.fdi.iw.model.User.Role;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -117,6 +116,10 @@ public class UserController {
    */
   @GetMapping("{id}")
   public String index(@PathVariable long id, Model model, HttpSession session) {
+    User requester = (User) session.getAttribute("u");
+    if (requester == null || requester.getId() != id) {
+      throw new NoEsTuPerfilException();
+    }
     User target = entityManager.find(User.class, id);
     model.addAttribute("user", target);
     return "user";
@@ -135,46 +138,51 @@ public class UserController {
       Model model, HttpSession session) throws IOException {
 
     User requester = (User) session.getAttribute("u");
-    User target = null;
-    if (id == -1 && requester.hasRole(Role.ADMIN)) {
-      // create new user with random password
-      target = new User();
-      target.setPassword(encodePassword(generateRandomBase64Token(12)));
-      target.setEnabled(true);
-      entityManager.persist(target);
-      entityManager.flush(); // forces DB to add user & assign valid id
-      id = target.getId(); // retrieve assigned id from DB
-    }
-
-    // retrieve requested user
-    target = entityManager.find(User.class, id);
+    User target = entityManager.find(User.class, id);
     model.addAttribute("user", target);
 
-    if (requester.getId() != target.getId() &&
-        !requester.hasRole(Role.ADMIN)) {
+    if (requester.getId() != target.getId()) {
       throw new NoEsTuPerfilException();
     }
 
-    if (edited.getPassword() != null) {
+    String username = edited.getUsername() == null ? null : edited.getUsername().trim();
+    if (username == null || username.isBlank()) {
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      model.addAttribute("profileError", "profile.error.usernameRequired");
+      return "user";
+    }
+
+    long existingUsers = entityManager
+        .createNamedQuery("User.hasUsername", Long.class)
+        .setParameter("username", username)
+        .getSingleResult();
+    if (!username.equals(target.getUsername()) && existingUsers > 0) {
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      model.addAttribute("profileError", "profile.error.usernameExists");
+      return "user";
+    }
+
+    if (edited.getPassword() != null && !edited.getPassword().isBlank()) {
       if (!edited.getPassword().equals(pass2)) {
         log.warn("Passwords do not match - returning to user form");
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-        model.addAttribute("user", target);
+        model.addAttribute("profileError", "profile.error.passwordMismatch");
         return "user";
       } else {
         // save encoded version of password
         target.setPassword(encodePassword(edited.getPassword()));
       }
     }
-    target.setUsername(edited.getUsername());
-    target.setFirstName(edited.getFirstName());
-    target.setLastName(edited.getLastName());
+    target.setUsername(username);
+    target.setFirstName(edited.getFirstName() == null ? null : edited.getFirstName().trim());
+    target.setLastName(edited.getLastName() == null ? null : edited.getLastName().trim());
 
     // update user session so that changes are persisted in the session, too
     if (requester.getId() == target.getId()) {
       session.setAttribute("u", target);
     }
 
+    model.addAttribute("profileOk", true);
     return "user";
   }
 
@@ -220,8 +228,7 @@ public class UserController {
 
     // check permissions
     User requester = (User) session.getAttribute("u");
-    if (requester.getId() != target.getId() &&
-        !requester.hasRole(Role.ADMIN)) {
+    if (requester.getId() != target.getId()) {
       throw new NoEsTuPerfilException();
     }
 

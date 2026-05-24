@@ -172,8 +172,6 @@
               </div>
             </form>
 
-            <p class="text-muted text-center mt-3 mb-0" th:text="#{guess.demoNote}"></p>
-
             <div th:if="${finished}" class="alert alert-secondary text-center mt-3 mb-0">
               <span th:if="${success}">✅ Daily completado.</span>
               <span th:unless="${success}">⏳ Daily terminado por intentos.</span>

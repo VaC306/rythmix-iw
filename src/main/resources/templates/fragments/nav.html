@@ -117,6 +117,13 @@
                             </a>
                         </li>
 
+                        <li class="nav-item align-self-center me-2">
+                            <a class="btn btn-outline-secondary btn-sm"
+                               th:href="@{/user/{id}(id=${u.id})}"
+                               th:text="#{nav.profile}">
+                            </a>
+                        </li>
+
                         <!--
                         <li class="nav-item mx-2">
                             <a class="nav-link"
