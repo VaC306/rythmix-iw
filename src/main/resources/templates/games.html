@@ -17,7 +17,7 @@
             <h1 class="text-center mb-5" th:text="#{games.title}"></h1>
 
             <!-- Modo 1 -->
-            <a th:href="@{/gartic}" class="text-decoration-none">
+            <!-- <a th:href="@{/gartic}" class="text-decoration-none">
                 <div class="card mb-4 shadow-sm">
                     <div class="card-body py-4">
                         <h2 class="card-title">
@@ -28,10 +28,53 @@
                            th:text="#{games.surpriseDesc}"></p>
                     </div>
                 </div>
-            </a>
+            </a> -->
+            <div class="card mb-4 shadow-sm position-relative">
+                <a th:href="@{/gartic}" class="text-decoration-none text-dark stretched-link">
+                    <div class="card-body py-4">
+                        <h2 class="card-title">
+                            <i class="bi bi-dice-5 me-2"></i> 
+                            <span th:text="#{games.surpriseTitle}"></span>
+                        </h2>
+                        <p class="card-text text-muted" th:text="#{games.surpriseDesc}"></p>
+                    </div>
+                </a>
+
+                <div class="px-4 pb-4 position-relative" style="z-index: 2;">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#gartic-rules" aria-expanded="false" aria-controls="gartic-rules">
+                        <i class="bi bi-info-circle me-1"></i> Ver reglas
+                    </button>
+
+                    <div class="collapse" id="gartic-rules">
+                        <div class="mt-3 text-start">
+                            <hr>
+                            <h5 class="h6 fw-bold mb-3">¿Cómo funciona el juego?</h5>
+                            
+                            <ul class="list-unstyled small text-muted">
+                                <li class="mb-2">
+                                    <strong>Ronda 1: Pon la primera piedra</strong><br>
+                                    Cada jugador empieza una canción desde cero. Crea una pista con tu instrumento y dale un ritmo inicial. Cuando todos terminen, ¡empieza la magia!
+                                </li>
+                                <li class="mb-2">
+                                    <strong>El Gran Relevo</strong><br>
+                                    Al final de cada ronda, las canciones rotan. Recibirás la pista que creó uno de tus compañeros en la ronda anterior, y tu canción pasará al siguiente jugador.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Suma tu talento</strong><br>
+                                    Escucha lo que ha grabado tu compañero y añade una nueva capa con un instrumento diferente. ¡Haz que la canción crezca!
+                                </li>
+                                <li class="mb-2">
+                                    <strong>El Gran Estreno</strong><br>
+                                    Al final, tendréis tantas canciones como jugadores tengáis en la partida, ¡y cada una será una colaboración única!
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Modo 2 -->
-            <a th:href="@{/continue}" class="text-decoration-none">
+            <!-- <a th:href="@{/continue}" class="text-decoration-none">
                 <div class="card mb-4 shadow-sm">
                     <div class="card-body py-4">
                         <h2 class="card-title">
@@ -42,7 +85,50 @@
                            th:text="#{games.continueDesc}"></p>
                     </div>
                 </div>
-            </a>
+            </a> -->
+            <div class="card mb-4 shadow-sm position-relative">
+                <a th:href="@{/gartic}" class="text-decoration-none text-dark stretched-link">
+                    <div class="card-body py-4">
+                        <h2 class="card-title">
+                            <i class="bi bi-play-fill me-2"></i>
+                            <span th:text="#{games.continueTitle}"></span>
+                        </h2>
+                        <p class="card-text text-muted" th:text="#{games.continueDesc}"></p>
+                    </div>
+                </a>
+
+                <div class="px-4 pb-4 position-relative" style="z-index: 2;">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#continue-rules" aria-expanded="false" aria-controls="continue-rules">
+                        <i class="bi bi-info-circle me-1"></i> Ver reglas
+                    </button>
+
+                    <div class="collapse" id="continue-rules">
+                        <div class="mt-3 text-start">
+                            <hr>
+                            <h5 class="h6 fw-bold mb-3">¿Cómo funciona el juego?</h5>
+                            
+                            <ul class="list-unstyled small text-muted">
+                                <li class="mb-2">
+                                    <strong>Ronda 1: La base musical</strong><br>
+                                    Todos los jugadores crean, de forma independiente, una pista inicial con el primer instrumento para arrancar la canción.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>La Gran Votación</strong><br>
+                                    Una vez que todos terminan de grabar, escucháis las propuestas de cada jugador y votáis por vuestra favorita. ¡La pista más votada se convierte en la base oficial de la canción!                                
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Ronda a ronda: Construyendo el temazo</strong><br>
+                                    En las siguientes rondas, todos escucharéis la canción tal y como va hasta ese momento. Vuestra misión será grabar una nueva capa que encaje y mejore lo que ya hay. Al terminar la ronda, se vuelve a votar y solo la pista ganadora se añade a la canción.                                
+                                </li>
+                                <li class="mb-2">
+                                    <strong>El Gran Estreno</strong><br>
+                                    El juego termina tras un número fijo de rondas. Al final, podréis escuchar el resultado de vuestra obra maestra: una canción épica construida paso a paso con las mejores aportaciones de todo el grupo.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
         </div>
     </main>
