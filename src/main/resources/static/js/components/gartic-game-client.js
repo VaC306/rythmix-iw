@@ -245,11 +245,11 @@ async function setupGameScreen() {
 function createCardHTML(params) {
   const html = `
     <div class="card mb-3">
-      <div class="card-body row align-items-center py-5">
-        <div class="col col-8">
+      <div class="card-body d-flex align-items-center py-5 px-5">
+        <div class="flex-grow-1">
           <input id="${params.progressBarId}" type="range" class="form-range">
         </div>
-        <div class="col col-4">                        
+        <div class="ms-5">                        
           <div class="btn-group" role="group">
             <button id="${params.playButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.play}">
               <i class="bi bi-play-fill"></i>
