@@ -5,7 +5,7 @@ Feature: Gartic - Juego completo de gartic como admi
 
   Scenario: Se crea el user de admin y juega la partida
 
-    # Iniciamos sesión como usuario
+    # Iniciamos sesión como admin
     * configure driver = { type: 'chrome', showDriverLog: false }
     * driver baseUrl + '/login'
     * input('#username', 'a')
