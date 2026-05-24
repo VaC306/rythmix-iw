@@ -3,56 +3,112 @@
 
 <head>
     <th:block th:replace="~{fragments/head :: header}" />
-    <title>IW: Perfil</title>
+    <title th:text="#{profile.pageTitle}">IW: Perfil</title>
 </head>
 
 <body class="d-flex flex-column h-100">
     <header th:replace="~{fragments/nav.html :: nav}"></header>
 
     <main class="flex-shrink-0">
-        <!--
-        <div id="books" class="border border-2 border-primary rounded">
-            <label for="isbn">ISBN</label><input id="isbn" value="9780140328721" />
-            <button id="fetchBook">Buscar datos online</button>
-            <img class="preview" id="portada" alt="portada del libro" />
-            <form th:action="@{/user/__${user.id}__/pic}">
-                <button id="postPortada" class="perfilable">Usar como foto de perfil</button>
-            </form>
-        </div>
-        <div id="movies" class="border border-2 border-secondary rounded">
-            <label for="imdb">IMDB</label><input id="imdb" value="tt11286314" />
-            <button id="fetchMovie">Buscar datos online</button>
-            <img class="preview" id="poster" alt="poster de la pelicula" />
-            <form th:action="@{/user/__${user.id}__/pic}">
-                <button id="postPoster" class="perfilable">Usar como foto de perfil</button>
-            </form>
-        </div>
-        <div id="profile" class="border border-2 border-tertiary rounded">
-            <input type="file" id="f_avatar" accept="image/jpeg,image/png">
-            <img class="preview" id="avatar" alt="careto a subir" />
-            <form th:action="@{/user/__${user.id}__/pic}">
-                <button id="postAvatar">Usar como foto de perfil</button>
-            </form>
-        </div>-->
+        <div class="container py-4">
+            <h1 class="mt-3 mb-4" th:text="#{profile.title}">Mi perfil</h1>
 
-        <div class="container">
-            <h1 class="mt-5">Perfil de <span th:text="${user.username}">Paco</span></h1>
-            <!-- recepción de mensajes -->
-            <div class="py-1 row" id="mensajes">
-            </div>
-            <!-- envío de mensajes -->
-            <div class="py-1 row ">
-                <form th:action="@{/user/__${user.id}__/msg}" method="POST">
-                    <input type="text" id="message" placeholder="escribe a este usuario" />
-                    <button id="sendmsg" class="btn btn-secondary" type="submit">Enviar</button>
-                </form>
+            <div th:if="${profileOk}" class="alert alert-success" th:text="#{profile.update.success}"></div>
+            <div th:if="${profileError}" class="alert alert-danger" th:text="#{${profileError}}"></div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <img class="iwthumb rounded-circle mb-3"
+                                 style="height: 96px; width: 96px; object-fit: cover;"
+                                 th:src="@{/user/{id}/pic(id=${user.id})}"
+                                 th:alt="#{profile.avatarAlt}">
+
+                            <h5 class="card-title mb-1" th:text="${user.username}">username</h5>
+                            <p class="text-muted mb-3" th:text="${(user.firstName ?: '') + ' ' + (user.lastName ?: '')}">Nombre</p>
+
+                            <ul class="list-group list-group-flush text-start">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span th:text="#{profile.label.login}">Login</span>
+                                    <strong th:text="${user.username}">user</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span th:text="#{profile.label.roles}">Roles</span>
+                                    <strong th:text="${user.roles}">USER</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span th:text="#{profile.label.status}">Estado</span>
+                                    <strong th:text="${user.enabled ? #messages.msg('profile.status.enabled') : #messages.msg('profile.status.disabled')}">Activo</strong>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="h5 mb-3" th:text="#{profile.edit.title}">Editar perfil</h2>
+                            <form th:action="@{/user/{id}(id=${user.id})}" method="post">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                                <div class="mb-3">
+                                    <label for="username" class="form-label" th:text="#{profile.label.username}">Usuario</label>
+                                    <input type="text" id="username" name="username" class="form-control" required
+                                           th:value="${user.username}">
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="firstName" class="form-label" th:text="#{profile.label.firstName}">Nombre</label>
+                                        <input type="text" id="firstName" name="firstName" class="form-control"
+                                               th:value="${user.firstName}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="lastName" class="form-label" th:text="#{profile.label.lastName}">Apellidos</label>
+                                        <input type="text" id="lastName" name="lastName" class="form-control"
+                                               th:value="${user.lastName}">
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <p class="text-muted mb-3" th:text="#{profile.password.help}">Deja estos campos vacios si no quieres cambiar la contraseña.</p>
+
+                                <div class="mb-3">
+                                    <label for="password" class="form-label" th:text="#{profile.label.password}">Nueva contraseña</label>
+                                    <input type="password" id="password" name="password" class="form-control"
+                                           autocomplete="new-password">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="pass2" class="form-label" th:text="#{profile.label.repeatPassword}">Repetir contraseña</label>
+                                    <input type="password" id="pass2" name="pass2" class="form-control"
+                                           autocomplete="new-password">
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" th:text="#{profile.save}">Guardar cambios</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="h5 mb-3" th:text="#{profile.avatar.title}">Foto de perfil</h2>
+                            <form th:action="@{/user/{id}/pic(id=${user.id})}" method="post" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <input type="file" name="photo" class="form-control" accept="image/jpeg,image/png" required>
+                                <button type="submit" class="btn btn-outline-primary" th:text="#{profile.avatar.upload}">Subir foto</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
 
     <th:block th:replace="~{fragments/footer.html :: footer}" />
-
-    <script th:src="@{/js/ajax-demo.js}"></script>
 </body>
 
 </html>
