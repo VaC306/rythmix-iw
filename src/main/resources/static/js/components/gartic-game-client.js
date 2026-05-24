@@ -103,18 +103,6 @@ function showScreen(selector) {
   gameContainer.appendChild(instance);
 }
 
-// function sendStartRequest() {
-//   console.log("Sending start request...");
-//   let body = {
-//     userId: config.userId,
-//     totalRounds: parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
-//     roundInstruments: [],
-//   };
-//   for (let i = 0; i < body.totalRounds; i++)
-//     body.roundInstruments.push(parseInt(document.querySelector(`#select-instrument-round-${i}`).value));
-//   ws.stompClient.send(`/gartic/lobby/${lobbyCode}/start`, {}, JSON.stringify(body));
-// }
-
 function sendStartRequest() {
   console.log("Sending start request...");
   let body = {
@@ -135,15 +123,6 @@ function sendStartRequest() {
     }
   });
 }
-
-// function sendTrack() {
-//   console.log("Sending created track...");
-//   ws.stompClient.send(
-//     `/gartic/lobby/${lobbyCode}/tracks/post`,
-//     {},
-//     JSON.stringify({ userId: config.userId, track: pianoRoll.getEditableTrack() }),
-//   );
-// }
 
 function sendTrack() {
   waitingForNewRound = true;
