@@ -7,11 +7,45 @@ Rythmix es una aplicación web interactiva centrada en la música y el juego col
 ## 🎮 Modos de juego
 
 ### 🎵 Adivina la canción
-Escucha un fragmento musical y demuestra que sabes reconocer la canción antes que nadie.  
+Escucha un fragmento musical y demuestra que sabes reconocer la canción antes que nadie.
+
+**¿Cómo funciona el juego?**
+
+- **Ronda 1: Pon la primera piedra**
+
+Cada jugador empieza una canción desde cero. Crea una pista con tu instrumento y dale un ritmo inicial. Cuando todos terminen, ¡empieza la magia!
+
+- **El Gran Relevo**
+
+Al final de cada ronda, las canciones rotan. Recibirás la pista que creó uno de tus compañeros en la ronda anterior, y tu canción pasará al siguiente jugador.
+
+- **Suma tu talento**
+
+Escucha lo que ha grabado tu compañero y añade una nueva capa con un instrumento diferente. ¡Haz que la canción crezca!
+
+- **El Gran Estreno**
+
+Al final, tendréis tantas canciones como jugadores tengáis en la partida, ¡y cada una será una colaboración única!
+
 ✅ *Esta parte está implementada y 100% funcional.*
 
 ### 🎲 Canción sorpresa
 Cada jugador aporta una parte sin conocer el resultado final, dando lugar a combinaciones inesperadas.  
+
+**¿Cómo funciona el juego?**
+- **Ronda 1: La base musical**
+
+Todos los jugadores crean, de forma independiente, una pista inicial con el primer instrumento para arrancar la canción.
+- **La Gran Votación**
+
+Una vez que todos terminan de grabar, escucháis las propuestas de cada jugador y votáis por vuestra favorita. ¡La pista más votada se convierte en la base oficial de la canción!
+- **Ronda a ronda: Construyendo el temazo**
+
+En las siguientes rondas, todos escucharéis la canción tal y como va hasta ese momento. Vuestra misión será grabar una nueva capa que encaje y mejore lo que ya hay. Al terminar la ronda, se vuelve a votar y solo la pista ganadora se añade a la canción.
+- **El Gran Estreno**
+
+El juego termina tras un número fijo de rondas. Al final, podréis escuchar el resultado de vuestra obra maestra: una canción épica construida paso a paso con las mejores aportaciones de todo el grupo.
+
 ✅ *Esta parte está implementada y 100% funcional.*
 
 ### ▶️ Continuación de canción
