@@ -1,86 +1,157 @@
-<!DOCTYPE html>
-<html class="h-100" xmlns:th="http://www.thymeleaf.org" th:data-lobby-code="${lobbyCode}">
+<!doctype html>
+<html
+    class="h-100"
+    xmlns:th="http://www.thymeleaf.org"
+    th:data-lobby-code="${lobbyCode}"
+>
+    <head>
+        <meta charset="UTF-8" />
+        <th:block th:replace="~{fragments/head :: header}" />
+        <title th:text="#{gartic.pageTitle}"></title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        />
+        <link
+            rel="stylesheet"
+            th:href="@{/css/components/pianoRoll.css}"
+            href="/css/components/pianoRoll.css"
+        />
+    </head>
 
-<head>
-    <meta charset="UTF-8" />
-    <th:block th:replace="~{fragments/head :: header}" />
-    <title th:text="#{gartic.pageTitle}"></title>
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-    />
-    <link rel="stylesheet" th:href="@{/css/components/pianoRoll.css}" href="/css/components/pianoRoll.css">
-</head>
+    <body class="d-flex flex-column h-100">
+        <header th:replace="~{fragments/nav.html :: nav}"></header>
 
-<body class="d-flex flex-column h-100">
-<header th:replace="~{fragments/nav.html :: nav}"></header>
+        <main class="flex-shrink-0">
+            <div class="container my-5 text-center">
+                <!-- Cabecera -->
+                <div
+                    class="position-relative d-flex align-items-center justify-content-center mb-4"
+                >
+                    <h1 class="mb-0 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-music-note-beamed"></i>
+                        <span th:text="#{gartic.title}"></span>
+                    </h1>
+                    <button
+                        type="button"
+                        class="btn btn-primary position-absolute end-0"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#chat-offcanvas"
+                    >
+                        Chat
+                        <span
+                            id="chat-button-badge"
+                            class="visually-hidden position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light"
+                            >0<span class="visually-hidden"
+                                >unread messages</span
+                            ></span
+                        >
+                    </button>
+                </div>
+                <!-- Contenedor del juego -->
+                <div id="game-container"></div>
 
-<main class="flex-shrink-0">
-    <div class="container my-5 text-center">
-        <!-- Cabecera -->
-        <div class="position-relative d-flex align-items-center justify-content-center mb-4">
-            <h1 class="mb-0 d-inline-flex align-items-center gap-2">
-                <i class="bi bi-music-note-beamed"></i>
-                <span th:text="#{gartic.title}"></span>
-            </h1>
-            <button type="button" class="btn btn-primary position-absolute end-0" data-bs-toggle="offcanvas" data-bs-target="#chat-offcanvas">
-                Chat
-                <span id="chat-button-badge" class="visually-hidden position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">0<span class="visually-hidden">unread messages</span></span>
-            </button>
-        </div>
-        <!-- Contenedor del juego -->
-        <div id="game-container"></div>
+                <!-- Pantalla de pista enviada -->
+                <template id="track-sent">
+                    <h3>Se ha enviado la pista</h3>
+                    <h5>Esperando a los demás jugadores</h5>
+                </template>
 
-        <!-- Pantalla de pista enviada -->
-        <template id="track-sent">
-            <h3>Se ha enviado la pista</h3>
-            <h5>Esperando a los demás jugadores</h5>
-        </template>
+                <!-- Sala de espera -->
+                <template id="waiting-room"
+                    ><th:block
+                        th:replace="~{fragments/waiting-room :: waiting-room}"
+                    ></th:block
+                ></template>
 
-        <!-- Sala de espera -->
-        <template id="waiting-room"><th:block th:replace="~{fragments/waiting-room :: waiting-room}"></th:block></template>
+                <!-- Pantalla final -->
+                <template id="end-screen"
+                    ><th:block
+                        th:replace="~{fragments/end-screen :: end-screen}"
+                    ></th:block
+                ></template>
 
-        <!-- Pantalla final -->
-        <template id="end-screen"><th:block th:replace="~{fragments/end-screen :: end-screen}"></th:block></template>
-        
-        <!-- Pantalla de juego -->
-        <template id="game-screen"><th:block th:replace="~{fragments/game-screen :: game-screen}"></th:block></template>
-        
-        <div id="chat-offcanvas" class="offcanvas offcanvas-end" tabindex="-1">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title">Chat del lobby</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body d-flex flex-column overflow-hidden">
-                <div class="card mx-3 flex-grow-1 d-flex flex-column h-100">
-                    <div id="chat-messages" class="card-body chat-messages overflow-auto" style="min-height: 0;"></div>
-                    <div class="card-footer d-flex gap-2">
-                        <input id="chat-input" class="form-control" placeholder="Escribe..."/>
-                        <button id="chat-send" class="btn btn-primary">Enviar</button>
+                <!-- Pantalla de juego -->
+                <template id="game-screen"
+                    ><th:block
+                        th:replace="~{fragments/game-screen :: game-screen}"
+                    ></th:block
+                ></template>
+
+                <div
+                    id="chat-offcanvas"
+                    class="offcanvas offcanvas-end"
+                    tabindex="-1"
+                >
+                    <div class="offcanvas-header">
+                        <h5 class="offcanvas-title">Chat del lobby</h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="offcanvas"
+                            aria-label="Close"
+                        ></button>
+                    </div>
+                    <div
+                        class="offcanvas-body d-flex flex-column overflow-hidden"
+                    >
+                        <div
+                            class="card mx-3 flex-grow-1 d-flex flex-column h-100"
+                        >
+                            <div
+                                id="chat-messages"
+                                class="card-body chat-messages overflow-auto"
+                                style="min-height: 0"
+                            ></div>
+                            <div class="card-footer d-flex gap-2">
+                                <input
+                                    id="chat-input"
+                                    class="form-control"
+                                    placeholder="Escribe..."
+                                />
+                                <button id="chat-send" class="btn btn-primary">
+                                    Enviar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>   
-        </div>
-    </div>
-</main>
+            </div>
+        </main>
 
-<th:block th:replace="~{fragments/footer.html :: footer}" />
-</body>
-<script type="text/javascript">
-    const isOwner = "[[${isOwner}]]"=="true"
-    const lobbyCode = "[[${lobbyCode}?:'']]"
-    const username  = "[[${u?.username}?:'Unknown']]"
-    const initialGameStatus = "[[${gameStatus}?:'WAITING']]"
-    const initialTrackSent = ("[[${trackSent}]]" != "false")
-    let gameData = {
-        currentRound: parseInt("[[${currentRound}?:0]]"),
-        totalRounds: parseInt("[[${totalRounds}?:4]]"),
-        instrument: parseInt("[[${instrument}?:1]]"),
-        roundData: {}
-    } 
-</script>
-<script th:src="@{/js/components/gartic-game-client.js}" src="/js/components/gartic-game-client.js" defer></script>
-<script th:src="@{/js/components/piano-roll.js}" src="/js/components/piano-roll.js" defer></script>
-<script th:src="@{/js/abcjs-basic-min.js}" src="/js/abcjs-basic-min.js" defer></script>
-<script th:src="@{/js/components/game-chat.js}" src="/js/components/game-chat.js" defer></script>
+        <th:block th:replace="~{fragments/footer.html :: footer}" />
+    </body>
+    <script type="text/javascript">
+        const isOwner = "[[${isOwner}]]" == "true";
+        const lobbyCode = "[[${lobbyCode}?:'']]";
+        const username = "[[${u?.username}?:'Unknown']]";
+        const initialGameStatus = "[[${gameStatus}?:'WAITING']]";
+        const initialTrackSent = "[[${trackSent}]]" != "false";
+        let gameData = {
+            currentRound: parseInt("[[${currentRound}?:0]]"),
+            totalRounds: parseInt("[[${totalRounds}?:4]]"),
+            instrument: parseInt("[[${instrument}?:1]]"),
+            roundData: {},
+        };
+    </script>
+    <script
+        th:src="@{/js/components/gartic-game-client.js}"
+        src="/js/components/gartic-game-client.js"
+        defer
+    ></script>
+    <script
+        th:src="@{/js/components/piano-roll.js}"
+        src="/js/components/piano-roll.js"
+        defer
+    ></script>
+    <script
+        th:src="@{/js/abcjs-basic-min.js}"
+        src="/js/abcjs-basic-min.js"
+        defer
+    ></script>
+    <script
+        th:src="@{/js/components/game-chat.js}"
+        src="/js/components/game-chat.js"
+        defer
+    ></script>
 </html>
