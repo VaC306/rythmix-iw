@@ -4,6 +4,7 @@
 <head>
     <th:block th:replace="~{fragments/head :: header}" />
     <title th:text="#{profile.pageTitle}">IW: Perfil</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -105,10 +106,43 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Ultimas partidas -->
+            <div class="row mt-4" th:if="${not #lists.isEmpty(gameHistory)}">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="h5 mb-3" th:text="#{profile.history.title}">Últimas partidas</h2>
+                            <div class="row g-3">
+                                <div class="col-12" th:each="game : ${gameHistory}">
+                                    <div class="card border-secondary" th:data-game-history-id="${game.id}">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <strong th:text="${game.typeName}">Tipo</strong>
+                                            <span class="text-muted small" th:if="${game.dateEnded != null}" th:text="${#temporals.format(game.dateEnded, 'dd/MM/yyyy HH:mm')}">fecha</span>
+                                            <span class="text-muted small" th:if="${game.dateEnded == null}" th:text="#{profile.history.dateUnknown}">fecha desconocida</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-2">
+                                                <span th:text="#{profile.history.players}">Jugadores:</span>
+                                                <span th:text="${#strings.listJoin(game.players, ', ')}">players</span>
+                                            </p>
+                                            <div class="history-cards-container"></div>
+                                        </div>
+                                        <div class="visually-hidden" th:id="'sequences-' + ${game.id}" th:text="${game.sequencesJson}">sequences</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
     <th:block th:replace="~{fragments/footer.html :: footer}" />
+    <script th:src="@{/js/components/piano-roll.js}" src="/js/components/piano-roll.js" defer></script>
+    <script th:src="@{/js/abcjs-basic-min.js}" src="/js/abcjs-basic-min.js" defer></script>
+    <script th:src="@{/js/components/profile.js}" src="/js/components/profile.js" defer></script>
 </body>
 
 </html>

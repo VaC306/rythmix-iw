@@ -1,5 +1,6 @@
 package es.ucm.fdi.iw.controller;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -206,6 +207,8 @@ public class ContinueApiController {
 
             if (game.getCurrentRound() == game.getTotalRounds()) {
                 game.setStatus(ContinueGameStatus.FINISHED);
+                game.setFinished(true);
+                game.setDateEnded(LocalDateTime.now());
                 midiGameRepository.save(game);
                 final String code1 = lobbyCode;
                 final SimpMessagingTemplate msg1 = messagingTemplate;

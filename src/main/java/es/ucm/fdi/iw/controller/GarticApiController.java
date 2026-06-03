@@ -1,5 +1,6 @@
 package es.ucm.fdi.iw.controller;
 
+import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -150,6 +151,8 @@ public class GarticApiController {
             // El juego ha acabado
             if (game.getCurrentRound() == game.getTotalRounds()) {
                 game.setStatus(GarticGameStatus.FINISHED);
+                game.setFinished(true);
+                game.setDateEnded(LocalDateTime.now());
                 midiGameRepository.save(game);
                 messagingTemplate.convertAndSend("/topic/gartic/lobby/" + lobbyCode, new GameUpdate("GAMEENDED", null));
                 return Map.of("result", "ok");
