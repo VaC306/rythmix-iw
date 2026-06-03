@@ -126,6 +126,18 @@ a:hover {
     background-color: transparent;
 }
 
+.rx-lobby-info-alert {
+    background-color: var(--rx-secondary-bg);
+    border-color: var(--rx-secondary-border) !important;
+    color: var(--rx-text);
+}
+
+.rx-lobby-option-row {
+    background-color: var(--rx-secondary-bg);
+    border-color: var(--rx-secondary-border) !important;
+    color: var(--rx-text);
+}
+
 .text-muted,
 .text-secondary {
     color: var(--rx-muted) !important;
