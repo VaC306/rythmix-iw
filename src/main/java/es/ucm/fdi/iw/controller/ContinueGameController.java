@@ -189,6 +189,7 @@ public class ContinueGameController {
         model.addAttribute("isAdmin", u.hasRole(User.Role.ADMIN));
         model.addAttribute("currentRound", game.getCurrentRound());
         model.addAttribute("totalRounds", game.getTotalRounds());
+        model.addAttribute("roundInstruments", game.getRoundInstruments());
         model.addAttribute("gameStatus", game.getStatus());
         model.addAttribute(
             "playerList",

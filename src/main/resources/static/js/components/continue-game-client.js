@@ -1,5 +1,12 @@
 "use strict";
 
+const lobbyCode = window.lobbyCode || document.documentElement.dataset.lobbyCode || "";
+const isOwner = window.isOwner === true;
+let lobbyOptions = window.initialLobbyOptions || {
+  totalRounds: 4,
+  roundInstruments: [128, 34, 1, 56],
+};
+
 const selectors = {
   gameContainer: "#game-container",
   startButton: "#start-button",
@@ -26,6 +33,8 @@ const selectors = {
   endScreenTemplate: "#end-screen",
   instrumentSelectContainer: "#instrument-select-container",
   numberOfRoundsSelector: "#select-rounds",
+  spectatorRoundCount: "#spectator-round-count",
+  spectatorRoundSummary: "#spectator-round-summary",
 };
 
 let gameData,
@@ -68,6 +77,9 @@ function handleMessage(m) {
       showScreen(selectors.gameScreenTemplate);
       gameData = m.data;
       setupGameScreen();
+      break;
+    case "LOBBYOPTIONSUPDATED":
+      applyLobbyOptions(m.data);
       break;
     case "TRACKRECEIVED":
       showScreen(selectors.trackSentTemplate);
@@ -125,16 +137,7 @@ function showScreen(selector) {
 
 function sendStartRequest() {
   console.log("Sending start request...");
-  let body = {
-    totalRounds: parseInt(
-      document.querySelector(selectors.numberOfRoundsSelector).value,
-    ),
-    roundInstruments: [],
-  };
-  for (let i = 0; i < body.totalRounds; i++)
-    body.roundInstruments.push(
-      parseInt(document.querySelector(`#select-instrument-round-${i}`).value),
-    );
+  let body = getCurrentLobbyOptions();
   console.log({
     method: "POST",
     "X-CSRF-TOKEN": config.csrf.value,
@@ -189,6 +192,76 @@ async function setupPianoRoll(selectors) {
     });
 }
 
+function getCurrentLobbyOptions() {
+  const roundSelector = document.querySelector(selectors.numberOfRoundsSelector);
+  const totalRounds = roundSelector
+    ? parseInt(roundSelector.value, 10)
+    : lobbyOptions.totalRounds;
+  const roundInstruments = [];
+  for (let i = 0; i < totalRounds; i++) {
+    const select = document.querySelector(`#select-instrument-round-${i}`);
+    roundInstruments.push(
+      select
+        ? parseInt(select.value, 10)
+        : lobbyOptions.roundInstruments?.[i] ?? 128,
+    );
+  }
+  return { totalRounds, roundInstruments };
+}
+
+function getInstrumentName(program) {
+  const instrument = availableInstruments?.find((ins) => ins.program === program);
+  return instrument ? instrument.instrumentName : `Instrumento #${program}`;
+}
+
+function renderSpectatorLobbyOptions(options) {
+  const roundCount = document.querySelector(selectors.spectatorRoundCount);
+  const summary = document.querySelector(selectors.spectatorRoundSummary);
+  if (!roundCount || !summary) return;
+
+  roundCount.textContent = options.totalRounds;
+  summary.innerHTML = "";
+  options.roundInstruments.forEach((program, index) => {
+    summary.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="rx-lobby-option-row d-flex justify-content-between small rounded px-3 py-2 border">
+        <span>Ronda ${index + 1}</span>
+        <span class="text-muted">${getInstrumentName(program)}</span>
+      </div>
+      `,
+    );
+  });
+}
+
+async function syncLobbyOptions(options = getCurrentLobbyOptions()) {
+  if (!isOwner) return;
+  const r = await fetch(`/api/continue/lobby/${lobbyCode}/options`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-CSRF-TOKEN": config.csrf.value,
+    },
+    body: JSON.stringify(options),
+  });
+  if (!r.ok) console.log("Could not sync lobby options", r.status);
+}
+
+function applyLobbyOptions(options) {
+  lobbyOptions = {
+    totalRounds: options.totalRounds,
+    roundInstruments: [...options.roundInstruments],
+  };
+
+  if (isOwner && document.querySelector(selectors.numberOfRoundsSelector)) {
+    document.querySelector(selectors.numberOfRoundsSelector).value =
+      options.totalRounds;
+    createInstrumentSelects(options.roundInstruments);
+  }
+
+  renderSpectatorLobbyOptions(options);
+}
+
 async function showInstructionsModal(selectors) {
   const instrumentData = gameData.roundData.instrumentData;
   document.querySelector(selectors.instructionsModalLabel).textContent =
@@ -204,35 +277,58 @@ async function showInstructionsModal(selectors) {
 function setupWaitingRoom() {
   if (isOwner) {
     document.querySelector(selectors.startButton).onclick = sendStartRequest;
-    if (availableInstruments == null) {
-      fetch("/api/game/instrument/getall").then((r) => {
-        if (r.ok)
-          r.json().then((list) => {
-            availableInstruments = list;
-            createInstrumentSelects();
-          });
-      });
-    } else createInstrumentSelects();
-    document
-      .querySelector(selectors.numberOfRoundsSelector)
-      .addEventListener("change", () => {
-        createInstrumentSelects();
-      });
   }
+
+  const instrumentPromise =
+    availableInstruments == null
+      ? fetch("/api/game/instrument/getall").then((r) =>
+          r.ok ? r.json().then((list) => (availableInstruments = list)) : null,
+        )
+      : Promise.resolve(availableInstruments);
+
+  instrumentPromise.then(() => {
+    if (isOwner) {
+      createInstrumentSelects();
+      document
+        .querySelector(selectors.numberOfRoundsSelector)
+        .addEventListener("change", () => {
+          const totalRounds = parseInt(
+            document.querySelector(selectors.numberOfRoundsSelector).value,
+            10,
+          );
+          const nextSelections = getCurrentLobbyOptions().roundInstruments.slice(
+            0,
+            totalRounds,
+          );
+          while (nextSelections.length < totalRounds) {
+            nextSelections.push(
+              lobbyOptions.roundInstruments[nextSelections.length] ??
+                availableInstruments?.[0]?.program ??
+                128,
+            );
+          }
+          createInstrumentSelects(nextSelections);
+          syncLobbyOptions({ totalRounds, roundInstruments: nextSelections });
+        });
+    }
+
+    renderSpectatorLobbyOptions(lobbyOptions);
+  });
 }
 
-function createInstrumentSelects() {
-  console.log(
-    "dasfkjnl",
-    parseInt(document.querySelector(selectors.numberOfRoundsSelector).value),
-  );
+function createInstrumentSelects(selectedInstruments = lobbyOptions.roundInstruments) {
   document.querySelector(selectors.instrumentSelectContainer).innerHTML = "";
+  const totalRounds = parseInt(
+    document.querySelector(selectors.numberOfRoundsSelector).value,
+    10,
+  );
   for (
     let i = 0;
-    i <
-    parseInt(document.querySelector(selectors.numberOfRoundsSelector).value);
+    i < totalRounds;
     i++
   ) {
+    const selectedProgram =
+      selectedInstruments[i] ?? availableInstruments?.[0]?.program ?? 128;
     document
       .querySelector(selectors.instrumentSelectContainer)
       .insertAdjacentHTML(
@@ -242,9 +338,9 @@ function createInstrumentSelects() {
         <select id="select-instrument-round-${i}" class="form-select">
           ${"".concat(
             ...availableInstruments.map(
-              (ins, idx) =>
+              (ins) =>
                 `
-            <option value=${ins.program} ${idx > 0 && ins.program != 128 && idx == i - 1 ? "selected" : ""} ${i == 0 && ins.program == 128 ? "selected" : ""}>
+            <option value=${ins.program} ${ins.program === selectedProgram ? "selected" : ""}>
               ${ins.instrumentName}
             </option>
             `,
@@ -255,6 +351,9 @@ function createInstrumentSelects() {
       </div>
       `,
       );
+    document
+      .querySelector(`#select-instrument-round-${i}`)
+      .addEventListener("change", () => syncLobbyOptions());
   }
 }
 

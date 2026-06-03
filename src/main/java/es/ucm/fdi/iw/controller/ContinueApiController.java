@@ -2,6 +2,7 @@ package es.ucm.fdi.iw.controller;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +99,40 @@ public class ContinueApiController {
                         Map.of("currentRound", game.getCurrentRound(), "totalRounds", game.getTotalRounds(),
                                 "instrument", game.getRoundInstruments().get(game.getCurrentRound()))));
         return Map.of("result", "ok");
+    }
+
+    @PostMapping("/lobby/{lobbyCode}/options")
+    @Transactional
+    public LobbyOptionsUpdate updateLobbyOptions(
+            @PathVariable String lobbyCode,
+            HttpSession session,
+            @RequestBody LobbyOptionsUpdate request) {
+        User u = (User) session.getAttribute("u");
+        if (u == null)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not logged in");
+
+        ContinueGame game = (ContinueGame) midiGameRepository.findByLobbyCode(lobbyCode)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lobby not found"));
+        if (game.getOwner().getId() != u.getId())
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the owner of this lobby");
+        if (game.getStatus() != ContinueGameStatus.WAITING)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Lobby is no longer configurable");
+
+        int totalRounds = request.totalRounds();
+        List<Integer> roundInstruments = request.roundInstruments();
+        if (totalRounds < 1)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Total rounds must be positive");
+        if (roundInstruments == null || roundInstruments.size() != totalRounds)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid round instruments");
+
+        game.setTotalRounds(totalRounds);
+        game.setRoundInstruments(new ArrayList<>(roundInstruments));
+        midiGameRepository.save(game);
+
+        LobbyOptionsUpdate payload = new LobbyOptionsUpdate(game.getTotalRounds(), List.copyOf(game.getRoundInstruments()));
+        messagingTemplate.convertAndSend("/topic/continue/lobby/" + lobbyCode,
+                new GameUpdate("LOBBYOPTIONSUPDATED", payload));
+        return payload;
     }
 
     @GetMapping("/lobby/{lobbyCode}/sequence/get")
@@ -321,6 +356,9 @@ public class ContinueApiController {
     }
 
     public record VoteRequest(long sequenceId) {
+    }
+
+    public record LobbyOptionsUpdate(int totalRounds, List<Integer> roundInstruments) {
     }
 
     public record GameUpdate(String type, Object data) {

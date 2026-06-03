@@ -69,10 +69,13 @@
 
 <th:block th:replace="~{fragments/footer.html :: footer}" />
 </body>
-<script type="text/javascript">
-    const isOwner = "[[${isOwner}]]"=="true"
-    const lobbyCode = "[[${lobbyCode}?:'']]"
-    const username  = "[[${u?.username}?:'Unknown']]"
+<script th:inline="javascript">
+    window.isOwner = /*[[${isOwner}]]*/ false
+    window.lobbyCode = /*[[${lobbyCode}]]*/ ""
+    window.initialLobbyOptions = {
+        totalRounds: /*[[${totalRounds}]]*/ 4,
+        roundInstruments: /*[[${roundInstruments}]]*/ [128, 34, 1, 56]
+    }
 </script>
 <script th:src="@{/js/components/continue-game-client.js}" src="/js/components/continue-game-client.js" defer></script>
 <script th:src="@{/js/components/piano-roll.js}" src="/js/components/piano-roll.js" defer></script>
