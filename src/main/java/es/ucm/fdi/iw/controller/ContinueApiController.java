@@ -228,6 +228,11 @@ public class ContinueApiController {
             final int newRound = game.getCurrentRound();
             final int totalRounds = game.getTotalRounds();
             final int instrument = game.getRoundInstruments().get(game.getCurrentRound());
+            final String winningPlayerUsername = game.getPlayers().stream()
+                    .filter(player -> player.getId() == winningPlayerId)
+                    .map(User::getUsername)
+                    .findFirst()
+                    .orElse("Jugador desconocido");
             final SimpMessagingTemplate msg2 = messagingTemplate;
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -235,7 +240,8 @@ public class ContinueApiController {
                     msg2.convertAndSend("/topic/continue/lobby/" + code2,
                             new GameUpdate("NEWROUND",
                                     Map.of("currentRound", newRound, "totalRounds", totalRounds,
-                                            "instrument", instrument)));
+                                            "instrument", instrument,
+                                            "winnerUsername", winningPlayerUsername)));
                 }
             });
         }
