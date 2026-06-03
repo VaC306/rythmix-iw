@@ -267,7 +267,9 @@ async function showInstructionsModal(selectors) {
   document.querySelector(selectors.instructionsModalLabel).textContent =
     `Ronda ${gameData.currentRound + 1} de ${gameData.totalRounds}`;
   document.querySelector(selectors.instructionsModalBody).textContent =
-    `Crea una pista de ${instrumentData.instrumentName} para la canción!`;
+    gameData.winnerUsername
+      ? `${gameData.winnerUsername} ganó la votación anterior. Ahora crea una pista de ${instrumentData.instrumentName} para la canción!`
+      : `Crea una pista de ${instrumentData.instrumentName} para la canción!`;
   const bsModal = new bootstrap.Modal(
     document.querySelector(selectors.instructionsModal),
   );
