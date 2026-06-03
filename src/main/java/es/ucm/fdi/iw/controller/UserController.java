@@ -1,9 +1,13 @@
 package es.ucm.fdi.iw.controller;
 
 import es.ucm.fdi.iw.LocalData;
+import es.ucm.fdi.iw.model.ContinueGame;
+import es.ucm.fdi.iw.model.GarticGame;
+import es.ucm.fdi.iw.model.MIDIGame;
 import es.ucm.fdi.iw.model.Message;
 import es.ucm.fdi.iw.model.Transferable;
 import es.ucm.fdi.iw.model.User;
+import es.ucm.fdi.iw.repository.MIDIGameRepository;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,6 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
@@ -66,6 +71,9 @@ public class UserController {
 
   @Autowired
   private PasswordEncoder passwordEncoder;
+
+  @Autowired
+  private MIDIGameRepository midiGameRepository;
 
   @ModelAttribute
   public void populateModel(HttpSession session, Model model) {
@@ -115,13 +123,35 @@ public class UserController {
    * Landing page for a user profile
    */
   @GetMapping("{id}")
-  public String index(@PathVariable long id, Model model, HttpSession session) {
+  public String index(@PathVariable long id, Model model, HttpSession session) throws JsonProcessingException {
     User requester = (User) session.getAttribute("u");
     if (requester == null || requester.getId() != id) {
       throw new NoEsTuPerfilException();
     }
     User target = entityManager.find(User.class, id);
     model.addAttribute("user", target);
+
+    List<MIDIGame> games = midiGameRepository.findFinishedGamesByPlayer(id);
+    ObjectMapper mapper = new ObjectMapper();
+    List<GameHistoryItem> history = new ArrayList<>();
+    for (MIDIGame g : games) {
+      String typeName;
+      if (g instanceof GarticGame) {
+        typeName = "Canción Sorpresa";
+      } else if (g instanceof ContinueGame) {
+        typeName = "Continuación de Canción";
+      } else {
+        typeName = "Partida";
+      }
+      List<String> playerNames = g.getPlayers().stream()
+          .map(User::getUsername).collect(Collectors.toList());
+      String sequencesJson = mapper.writeValueAsString(
+          g.getSequences().stream().map(s -> s.toTransfer()).collect(Collectors.toList()));
+      history.add(new GameHistoryItem(g.getId(), g.getLobbyCode(), typeName,
+          g.getDateEnded(), playerNames, sequencesJson,
+          (int) g.getPlayers().stream().filter(p -> p.getId() == id).count()));
+    }
+    model.addAttribute("gameHistory", history);
     return "user";
   }
 
@@ -358,5 +388,13 @@ public class UserController {
     
     return "contact";
   }
-  
+
+  public record GameHistoryItem(
+      long id,
+      String lobbyCode,
+      String typeName,
+      LocalDateTime dateEnded,
+      List<String> players,
+      String sequencesJson,
+      int playerCount) {}
 }

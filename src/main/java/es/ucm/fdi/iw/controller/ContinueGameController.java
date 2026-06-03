@@ -17,6 +17,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -175,6 +176,8 @@ public class ContinueGameController {
         );
         if (game.getCurrentRound() == game.getTotalRounds()) {
             game.setStatus(ContinueGameStatus.FINISHED);
+            game.setFinished(true);
+            game.setDateEnded(LocalDateTime.now());
             midiGameRepository.save(game);
         } else {
             model.addAttribute(

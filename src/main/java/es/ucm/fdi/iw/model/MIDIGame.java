@@ -1,6 +1,7 @@
 package es.ucm.fdi.iw.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
@@ -44,4 +45,6 @@ public class MIDIGame {
     protected boolean finished;
 
     protected boolean started;
+
+    protected LocalDateTime dateEnded;
 }
