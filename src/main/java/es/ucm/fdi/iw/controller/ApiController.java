@@ -294,13 +294,12 @@ public class ApiController {
 
   @GetMapping("/favSong")
   @Transactional
-  public List<MIDISequence.Transfer> getFavoriteSongs(HttpSession session){
+  public List<FavoriteSong.Transfer> getFavoriteSongs(HttpSession session){
       User u = (User) session.getAttribute("u");
       if (u == null)
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
-
-      List<MIDISequence.Transfer> favoriteSongs = favoritesSongsRepository.findByUser(u).stream().map(FavoriteSong::toMidiSequenceTransfer).toList();
-      return favoriteSongs;
+      List<FavoriteSong.Transfer> resuListFavSongs = favoritesSongsRepository.findByUser(u).stream().map(FavoriteSong::toTransfer).toList();
+      return resuListFavSongs;
   }
   
 }

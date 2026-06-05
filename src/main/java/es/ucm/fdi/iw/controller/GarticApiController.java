@@ -140,7 +140,9 @@ public class GarticApiController {
                 .get(u.getId());
         MIDISequence sequence = midiSequenceRepository.findById(sequenceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sequence not found"));
-        sequence.getTracks().add(new MIDITrack(submission, sequence));
+        MIDITrack track =new MIDITrack(submission, sequence);
+        track.setAuthor(u.getUsername());
+        sequence.getTracks().add(track);
         game.getTrackSubmissions().put(u.getId(), true);
         midiSequenceRepository.save(sequence);
         midiGameRepository.save(game);
