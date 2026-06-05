@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html class="h-100" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: header}" />
+    <title th:text="#{admin.pageTitle}">Rythmix · Admin</title>
+</head>
+<body class="d-flex flex-column h-100">
+    <header th:replace="~{fragments/nav.html :: nav}"></header>
+    <main class="flex-shrink-0">
+        <div class="container py-4">
+            <h1 class="mt-3 mb-3" th:text="#{admin.title}">Administracion</h1>
+            <th:block th:replace="~{fragments/admin-nav :: tabs(${adminSection})}"></th:block>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+                        <div>
+                            <h2 class="h5 mb-1" th:text="#{admin.gamesTitle}">Ultimas partidas jugadas</h2>
+                            <p class="text-muted mb-0" th:text="#{admin.gamesSubtitle}">Consulta las ultimas partidas terminadas y quienes participaron.</p>
+                        </div>
+                        <span class="badge text-bg-secondary" th:text="${'Ultimas ' + gamesLimit}">Ultimas 15</span>
+                    </div>
+                    <div th:if="${games.empty}" class="alert alert-info mb-0" th:text="#{admin.games.empty}">No hay partidas finalizadas todavia.</div>
+                    <div th:unless="${games.empty}" class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th th:text="#{admin.games.table.type}">Tipo</th>
+                                    <th th:text="#{admin.games.table.lobby}">Lobby</th>
+                                    <th th:text="#{admin.games.table.owner}">Creador</th>
+                                    <th th:text="#{admin.games.table.players}">Jugadores</th>
+                                    <th th:text="#{admin.games.table.ended}">Fin</th>
+                                    <th th:text="#{admin.games.table.visibility}">Visibilidad</th>
+                                    <th th:text="#{admin.games.table.sequences}">Secuencias</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="game : ${games}">
+                                    <td th:text="${game.id}">1</td>
+                                    <td th:text="${game.type}">Tipo</td>
+                                    <td><code th:text="${game.lobbyCode}">ABCD</code></td>
+                                    <td th:text="${game.owner}">owner</td>
+                                    <td th:text="${#strings.listJoin(game.players, ', ')}">players</td>
+                                    <td th:text="${game.endedAt != null ? #temporals.format(game.endedAt, 'dd/MM/yyyy HH:mm') : '-'}">fecha</td>
+                                    <td>
+                                        <span th:if="${game.publicGame}" class="badge text-bg-info" th:text="#{admin.games.public}">Publica</span>
+                                        <span th:unless="${game.publicGame}" class="badge text-bg-secondary" th:text="#{admin.games.private}">Privada</span>
+                                    </td>
+                                    <td th:text="${game.sequenceCount}">0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <th:block th:replace="~{fragments/footer.html :: footer}" />
+</body>
+</html>

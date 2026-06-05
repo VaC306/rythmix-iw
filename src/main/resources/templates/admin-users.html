@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html class="h-100" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: header}" />
+    <title th:text="#{admin.pageTitle}">Rythmix · Admin</title>
+</head>
+<body class="d-flex flex-column h-100">
+    <header th:replace="~{fragments/nav.html :: nav}"></header>
+    <main class="flex-shrink-0">
+        <div class="container py-4">
+            <h1 class="mt-3 mb-3" th:text="#{admin.title}">Administracion</h1>
+            <th:block th:replace="~{fragments/admin-nav :: tabs(${adminSection})}"></th:block>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+                        <div>
+                            <h2 class="h5 mb-1" th:text="#{admin.usersTitle}">Usuarios</h2>
+                            <p class="text-muted mb-0" th:text="#{admin.usersSubtitle}">Gestiona cuentas y estados de acceso.</p>
+                        </div>
+                        <span class="badge text-bg-secondary" th:text="${#lists.size(users) + ' usuarios'}">0 usuarios</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th th:text="#{admin.table.id}">Id</th>
+                                    <th th:text="#{admin.table.username}">Usuario</th>
+                                    <th th:text="#{admin.table.name}">Nombre y apellidos</th>
+                                    <th th:text="#{admin.table.roles}">Roles</th>
+                                    <th th:text="#{admin.table.status}">Estado</th>
+                                    <th th:text="#{admin.table.actions}">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="user : ${users}">
+                                    <td th:text="${user.id}">1</td>
+                                    <td>
+                                        <div class="fw-semibold" th:text="${user.username}">usuario</div>
+                                        <a th:href="@{/user/{id}(id=${user.id})}" class="small text-decoration-none">Ver perfil</a>
+                                    </td>
+                                    <td th:text="${(user.firstName ?: '') + ' ' + (user.lastName ?: '')}">Nombre</td>
+                                    <td th:text="${user.roles}">USER</td>
+                                    <td>
+                                        <span th:if="${user.enabled}" class="badge text-bg-success" th:text="#{profile.status.enabled}">Activo</span>
+                                        <span th:unless="${user.enabled}" class="badge text-bg-danger" th:text="#{profile.status.disabled}">Deshabilitado</span>
+                                    </td>
+                                    <td>
+                                        <form th:if="${!#strings.contains(user.roles, 'ADMIN')}" th:action="@{'/admin/toggle/' + ${user.id}}" method="post" class="d-inline">
+                                            <button th:if="${user.enabled}" type="submit" class="toggle btn btn-sm btn-danger" th:text="#{admin.disable}">Deshabilitar</button>
+                                            <button th:unless="${user.enabled}" type="submit" class="toggle btn btn-sm btn-primary" th:text="#{admin.enable}">Habilitar</button>
+                                        </form>
+                                        <span th:if="${#strings.contains(user.roles, 'ADMIN')}" class="text-muted small">Sin accion</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <th:block th:replace="~{fragments/footer.html :: footer}" />
+    <script>
+        document.addEventListener('click', e => {
+            const toggle = e.target.closest('.toggle');
+            if (!toggle) return;
+            e.preventDefault();
+            const form = toggle.closest('form');
+            go(form.action, 'POST').then(d => {
+                const statusBadge = toggle.closest('tr').querySelector('.badge');
+                if (d.enabled) {
+                    toggle.classList.remove('btn-primary');
+                    toggle.classList.add('btn-danger');
+                    toggle.textContent = 'Deshabilitar';
+                    statusBadge.className = 'badge text-bg-success';
+                    statusBadge.textContent = 'Activo';
+                } else {
+                    toggle.classList.remove('btn-danger');
+                    toggle.classList.add('btn-primary');
+                    toggle.textContent = 'Habilitar';
+                    statusBadge.className = 'badge text-bg-danger';
+                    statusBadge.textContent = 'Deshabilitado';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -122,10 +122,22 @@
                                             <span class="text-muted small" th:if="${game.dateEnded == null}" th:text="#{profile.history.dateUnknown}">fecha desconocida</span>
                                         </div>
                                         <div class="card-body">
-                                            <p class="mb-2">
-                                                <span th:text="#{profile.history.players}">Jugadores:</span>
-                                                <span th:text="${#strings.listJoin(game.players, ', ')}">players</span>
-                                            </p>
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted" th:text="#{profile.history.players}">Jugadores:</div>
+                                                    <div th:text="${#strings.listJoin(game.players, ', ')}">players</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted" th:text="#{profile.history.opponents}">Contra quién</div>
+                                                    <div th:text="${#lists.isEmpty(game.opponents) ? #messages.msg('profile.history.noOpponents') : #strings.listJoin(game.opponents, ', ')}">rivales</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted" th:text="#{profile.history.finalCount}">Melodías finales</div>
+                                                    <div th:text="${game.finalSequenceCount}">1</div>
+                                                </div>
+                                            </div>
+                                            <p class="mb-3 small text-muted" th:text="${game.outcomeSummary}">Resultado final</p>
+                                            <div class="small fw-semibold mb-2" th:text="#{profile.history.finalMelodies}">Melodías finales</div>
                                             <div class="history-cards-container"></div>
                                         </div>
                                         <div class="visually-hidden" th:id="'sequences-' + ${game.id}" th:text="${game.sequencesJson}">sequences</div>
@@ -134,6 +146,12 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="row mt-4" th:if="${#lists.isEmpty(gameHistory)}">
+                <div class="col-12">
+                    <div class="alert alert-info mb-0" th:text="#{profile.history.empty}">Todavía no has jugado partidas terminadas.</div>
                 </div>
             </div>
         </div>

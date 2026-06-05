@@ -7,7 +7,7 @@ Rythmix es una aplicación web interactiva centrada en la música y el juego col
 ## 🎮 Modos de juego
 
 ### 🎵 Adivina la canción
-Escucha un fragmento musical y demuestra que sabes reconocer la canción antes que nadie.
+Escucha por capas la canción diaria e intenta adivinarla antes de agotar los intentos.
 
 **¿Cómo funciona el juego?**
 
@@ -49,8 +49,16 @@ El juego termina tras un número fijo de rondas. Al final, podréis escuchar el 
 ✅ *Esta parte está implementada y 100% funcional.*
 
 ### ▶️ Continuación de canción
-*Crea la mejor canción posible, votando por los mejores tracks!*  
+Todos los jugadores construyen una misma canción por rondas y votan qué track pasa a formar parte del resultado final.  
 ✅ *Esta parte está implementada y 100% funcional.*
+
+### ⭐ Funcionalidades adicionales ya implementadas
+
+- Perfil de usuario con cambio de contraseña, foto e historial de partidas terminadas.
+- Reproducción de melodías finales desde el perfil.
+- Canciones favoritas con fecha de partida, autores e instrumentos usados.
+- Panel de administración separado en usuarios, partidas jugadas y configuración del daily.
+- Dashboard de observabilidad y vista de reportes del juego diario.
 
 ---
 
@@ -63,17 +71,21 @@ La estructura del proyecto está pensada para facilitar la ampliación futura co
 
 | Ruta | Estado |
 |------|--------|
-| `/` (Índice) | Página de bienvenida con redirección a los juegos |
+| `/` (Índice) | Página de bienvenida de la aplicación |
+| `/about` | Información general del proyecto |
+| `/authors` | Página con los autores del proyecto |
 | `/guess` (Adivina la canción) | Juego basado en adivinar mediante una serie de intentos el juego diario |
 | `/games` (Elegir juego) | Pagina donde se elije los tipos de juegos en multijugador |
-| `/gartic` (Canción sorpresa) | Lógica implementada desde la vista de un jugador, está implementado con websockets. Se basa en que cada ronda se crea un track distinto |
-| `/continue` | (Continua la canción) | Lógica implementada desde la vista de un jugador, está implementado con websockets y además realiza un sistema de votación para elegir el mejor track de la ronda |
-| `/favoriteSongs` | Pagina en donde se muestran las canciones marcadas como favoritas de los jeugos de gartic y continue, mostrando detalles como quien realizo el track en concreto
+| `/gartic` (Canción sorpresa) | Modo multijugador con websockets donde las secuencias rotan entre jugadores en cada ronda |
+| `/continue` (Continuación de canción) | Modo multijugador con websockets y votación para elegir el mejor track de cada ronda |
+| `/favoriteSongs` | Página de canciones favoritas con reproducción y detalle de fecha, autores e instrumentos |
 | `/leaderboard` | Se muestra un ranking de los jugadores con mejor puntuación del juego diario
-| `/user/{id}`| Pagina donde se puede visualizar el perfil de cada usuario. Se muestra el nombre y apellidos, nombre de usuario, rol asociado, estado de la cuenta, una sección para cambiar contraseña, otra sección para elegir una foto de perfil, por último se muestra al final una sección del historial de canciones en donde el jugador ha participado.
-| `/admin/dashboard` | En esta vista se muestra por un lado estadisticas de la aplicación como usuarios totales, partidas públicas, partidas privadas o total de canciones. Por otro lado, se muestra una sección de observabilidad mostrando distintos eventos producidos en la aplicación para saber quién ha hecho qué y cuándo.
-| `/admin/reports` | En esta sección se muestran los reportes realizados por los usuarios cuando han observado un error en la parte del juego de canción diario
-| `/admin/` | Esta es la vista del usuario, que puede observar los usuarios de la aplicación o insertar o actualizar la canción del juego diario. 
+| `/user/{id}`| Perfil de usuario con datos personales, cambio de contraseña, foto e historial de partidas con melodías finales reproducibles |
+| `/admin/users` | Vista administrativa de usuarios, con activación/desactivación de cuentas |
+| `/admin/games` | Vista administrativa de últimas partidas jugadas |
+| `/admin/daily` | Vista para preparar la canción del día, ajustar intentos/capas y subir MP3 |
+| `/admin/dashboard` | Vista con estadísticas globales y eventos de observabilidad |
+| `/admin/reports` | Vista con reportes enviados por usuarios sobre el juego diario |
 ---
 
 ## 🛠️ Tecnologías utilizadas
@@ -91,7 +103,7 @@ Fuera de la plantilla:
 
 ## 🔊 Subida de audios MP3
 
-Los administradores pueden subir/reemplazar MP3 de capas de canciones desde `/admin/`.
+Los administradores pueden subir o reemplazar MP3 de capas de canciones desde `/admin/daily`.
 
 - Los ficheros se guardan fuera de `src/main/resources/static` (en `iwdata/music/layer/`).
 - El audio se sirve por endpoint (`/song-layer/{id}/audio`), sin recompilar para cambiar canciones.
@@ -153,4 +165,4 @@ Este proyecto ha sido desarrollado como parte de la asignatura *Ingeniería Web 
 
 ## 📌 Estado del proyecto
 
-Finalizado el proyecto Rythmix de la asignatura de Ingeniera Web.
+Proyecto funcional con daily, modos multijugador, perfil enriquecido, favoritas y administración actualizada.

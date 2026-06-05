@@ -1,0 +1,16 @@
+<div th:fragment="tabs(activeSection)" class="mb-4">
+    <div class="d-flex flex-wrap gap-2">
+        <a th:href="@{/admin/users}"
+           class="btn"
+           th:classappend="${activeSection == 'users'} ? ' btn-primary' : ' btn-outline-primary'"
+           th:text="#{admin.nav.users}">Usuarios</a>
+        <a th:href="@{/admin/games}"
+           class="btn"
+           th:classappend="${activeSection == 'games'} ? ' btn-primary' : ' btn-outline-primary'"
+           th:text="#{admin.nav.games}">Partidas</a>
+        <a th:href="@{/admin/daily}"
+           class="btn"
+           th:classappend="${activeSection == 'daily'} ? ' btn-primary' : ' btn-outline-primary'"
+           th:text="#{admin.nav.daily}">Cancion del dia</a>
+    </div>
+</div>

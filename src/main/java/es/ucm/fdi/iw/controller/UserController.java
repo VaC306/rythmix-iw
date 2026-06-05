@@ -4,6 +4,8 @@ import es.ucm.fdi.iw.LocalData;
 import es.ucm.fdi.iw.model.ContinueGame;
 import es.ucm.fdi.iw.model.GarticGame;
 import es.ucm.fdi.iw.model.MIDIGame;
+import es.ucm.fdi.iw.model.MIDISequence;
+import es.ucm.fdi.iw.model.MIDITrack;
 import es.ucm.fdi.iw.model.Message;
 import es.ucm.fdi.iw.model.Transferable;
 import es.ucm.fdi.iw.model.User;
@@ -45,6 +47,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -123,6 +126,7 @@ public class UserController {
    * Landing page for a user profile
    */
   @GetMapping("{id}")
+  @Transactional
   public String index(@PathVariable long id, Model model, HttpSession session) throws JsonProcessingException {
     User requester = (User) session.getAttribute("u");
     if (requester == null || requester.getId() != id) {
@@ -145,14 +149,64 @@ public class UserController {
       }
       List<String> playerNames = g.getPlayers().stream()
           .map(User::getUsername).collect(Collectors.toList());
+      List<String> opponentNames = g.getPlayers().stream()
+          .filter(p -> p.getId() != id)
+          .map(User::getUsername)
+          .collect(Collectors.toList());
+      List<MIDISequence> finalSequences = resolveFinalSequences(g);
       String sequencesJson = mapper.writeValueAsString(
-          g.getSequences().stream().map(s -> s.toTransfer()).collect(Collectors.toList()));
+          finalSequences.stream().map(MIDISequence::toTransfer).collect(Collectors.toList()));
       history.add(new GameHistoryItem(g.getId(), g.getLobbyCode(), typeName,
-          g.getDateEnded(), playerNames, sequencesJson,
-          (int) g.getPlayers().stream().filter(p -> p.getId() == id).count()));
+          g.getDateEnded(), playerNames, opponentNames, buildOutcomeSummary(g, finalSequences), sequencesJson,
+          finalSequences.size()));
     }
     model.addAttribute("gameHistory", history);
     return "user";
+  }
+
+  private List<MIDISequence> resolveFinalSequences(MIDIGame game) {
+    if (game instanceof ContinueGame continueGame) {
+      return game.getSequences().stream()
+          .filter(seq -> seq.getId() == continueGame.getFinalSequenceId())
+          .toList();
+    }
+
+    return game.getSequences().stream()
+        .filter(seq -> seq.getTracks() != null && !seq.getTracks().isEmpty())
+        .sorted(Comparator.comparingLong(MIDISequence::getId))
+        .toList();
+  }
+
+  private String buildOutcomeSummary(MIDIGame game, List<MIDISequence> finalSequences) {
+    if (game instanceof ContinueGame) {
+      int trackCount = finalSequences.stream()
+          .flatMap(seq -> seq.getTracks().stream())
+          .toList()
+          .size();
+      String authors = joinAuthors(finalSequences);
+      if (!authors.isBlank()) {
+        return "La partida termino con una melodia final compartida de " + trackCount
+            + " pistas. Autores finales: " + authors + ".";
+      }
+      return "La partida termino con una melodia final compartida de " + trackCount + " pistas.";
+    }
+
+    String authors = joinAuthors(finalSequences);
+    if (!authors.isBlank()) {
+      return "La partida termino con " + finalSequences.size()
+          + " melodias finales. Intervinieron: " + authors + ".";
+    }
+    return "La partida termino con " + finalSequences.size() + " melodias finales.";
+  }
+
+  private String joinAuthors(List<MIDISequence> sequences) {
+    return sequences.stream()
+        .flatMap(seq -> seq.getTracks().stream())
+        .map(MIDITrack::getAuthor)
+        .filter(Objects::nonNull)
+        .filter(author -> !author.isBlank())
+        .distinct()
+        .collect(Collectors.joining(", "));
   }
 
   /**
@@ -395,6 +449,8 @@ public class UserController {
       String typeName,
       LocalDateTime dateEnded,
       List<String> players,
+      List<String> opponents,
+      String outcomeSummary,
       String sequencesJson,
-      int playerCount) {}
+      int finalSequenceCount) {}
 }
