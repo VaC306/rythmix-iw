@@ -46,7 +46,7 @@ public class FavoriteSong {
     public static class Transfer {
       private long sequenceId;
       private String gameType;
-      private LocalDateTime gameData;
+      private LocalDateTime gameDate;
       private List<MIDITrack.Transfer> tracks;
       private List<String> players;
     }

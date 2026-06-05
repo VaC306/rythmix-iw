@@ -71,7 +71,7 @@ public class GuessController {
 
     DailyGame dg = getOrCreateDaily(LocalDate.now());
     Song song = dg != null ? dg.getSong() : null;
-    List<SongLayer> layers = song != null ? layerRepo.findBySongOrderByIdxAsc(song) : List.of();
+    List<SongLayer> layers = visibleLayersForDaily(dg, song);
     boolean dailyAvailable = dg != null && audioAvailabilityService.hasAllAvailableAudio(layers);
 
     if (!dailyAvailable) {
@@ -162,7 +162,7 @@ public class GuessController {
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
       return "redirect:/guess";
     }
-    List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(dg.getSong());
+    List<SongLayer> layers = visibleLayersForDaily(dg, dg.getSong());
     if (!audioAvailabilityService.hasAllAvailableAudio(layers)) {
       log.info("Usuario {} intentó navegar capas sin audios disponibles en daily={}", u.getId(), dg.getId());
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
@@ -249,7 +249,7 @@ public class GuessController {
       return "redirect:/guess";
     }
     Song song = dg.getSong();
-    List<SongLayer> layers = layerRepo.findBySongOrderByIdxAsc(song);
+    List<SongLayer> layers = visibleLayersForDaily(dg, song);
     if (!audioAvailabilityService.hasAllAvailableAudio(layers)) {
       log.info("Usuario {} intentó enviar respuesta sin audios disponibles en daily={}", u.getId(), dg.getId());
       session.setAttribute("guessMsg", "guess.noAudioAdmin");
@@ -339,6 +339,19 @@ public class GuessController {
       dg.setActive(true);
       return dailyRepo.save(dg);
     });
+  }
+
+  private List<SongLayer> visibleLayersForDaily(DailyGame dg, Song song) {
+    if (song == null) {
+      return List.of();
+    }
+    List<SongLayer> allLayers = layerRepo.findBySongOrderByIdxAsc(song);
+    if (dg == null || allLayers.isEmpty()) {
+      return allLayers;
+    }
+    int configuredMaxLayers = Math.max(1, dg.getMaxLayers());
+    int visibleLayerCount = Math.min(configuredMaxLayers, allLayers.size());
+    return allLayers.subList(0, visibleLayerCount);
   }
 
   private void updateScore(User u, boolean won, int points) {

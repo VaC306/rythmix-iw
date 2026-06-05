@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="h-100" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: header}" />
+    <title th:text="#{admin.pageTitle}">Rythmix · Admin</title>
+</head>
+<body class="d-flex flex-column h-100">
+    <header th:replace="~{fragments/nav.html :: nav}"></header>
+    <main class="flex-shrink-0">
+        <div class="container py-4">
+            <h1 class="mt-3 mb-3" th:text="#{admin.title}">Administracion</h1>
+            <th:block th:replace="~{fragments/admin-nav :: tabs(${adminSection})}"></th:block>
+
+            <div th:if="${audioOk}" class="alert alert-success mt-3" th:text="#{${audioOk}}"></div>
+            <div th:if="${audioErr}" class="alert alert-danger mt-3" th:text="#{${audioErr}}"></div>
+            <div th:if="${dailyOk}" class="alert alert-success mt-3" th:text="${#messages.msgOrNull(dailyOk) ?: dailyOk}"></div>
+            <div th:if="${dailyErr}" class="alert alert-danger mt-3" th:text="${#messages.msgOrNull(dailyErr) ?: dailyErr}"></div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+                        <div>
+                            <h2 class="h5 mb-1" th:text="#{admin.daily.configTitle}">Configurar cancion del dia</h2>
+                            <p class="text-muted mb-0" th:text="#{admin.daily.configSubtitle}">Elige manualmente la cancion diaria y cuantos intentos o capas tendra.</p>
+                        </div>
+                        <span th:if="${todayDaily != null}" class="badge text-bg-info" th:text="${#messages.msg('admin.daily.currentSong') + ': ' + todayDaily.song.title}">Activa hoy</span>
+                    </div>
+
+                    <form th:action="@{/admin/daily/update}" method="post" class="row g-3 align-items-end">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                        <div class="col-lg-6">
+                            <label for="songId" class="form-label" th:text="#{admin.daily.songLabel}">Cancion</label>
+                            <select id="songId" name="songId" class="form-select" required>
+                                <option th:each="song : ${songs}"
+                                        th:with="status=${songAudioStatus[song.id]}"
+                                        th:value="${song.id}"
+                                        th:selected="${todayDailySongId != null and todayDailySongId == song.id}"
+                                        th:disabled="${status == null or !status.complete}"
+                                        th:text="${song.title + ' - ' + song.artist + (status != null and status.complete ? '' : ' (incompleta)')}">
+                                    Song
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 col-lg-2">
+                            <label for="maxTries" class="form-label" th:text="#{admin.daily.maxTries}">Intentos</label>
+                            <input id="maxTries" name="maxTries" type="number" min="1" max="10" class="form-control" th:value="${todayDaily != null ? todayDaily.maxTries : 2}" required>
+                        </div>
+
+                        <div class="col-md-3 col-lg-2">
+                            <label for="maxLayers" class="form-label" th:text="#{admin.daily.maxLayers}">Capas visibles</label>
+                            <input id="maxLayers" name="maxLayers" type="number" min="1" max="8" class="form-control" th:value="${todayDaily != null ? todayDaily.maxLayers : 4}" required>
+                        </div>
+
+                        <div class="col-md-3 col-lg-2">
+                            <button type="submit" class="btn btn-primary w-100" th:text="#{admin.daily.saveConfig}">Guardar</button>
+                        </div>
+                    </form>
+
+                    <form th:action="@{/admin/daily/reshuffle}" method="post" class="mt-3">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <button type="submit" class="btn btn-outline-primary" th:text="#{admin.daily.reshuffleBtn}">Reescoger cancion del Daily de hoy</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3" th:text="#{admin.daily.statusTitle}">Estado de canciones para Daily</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Cancion</th>
+                                    <th th:text="#{admin.daily.uploadedLayers}">Capas subidas</th>
+                                    <th th:text="#{admin.daily.state}">Estado</th>
+                                    <th th:text="#{admin.daily.available}">Disponible para Daily</th>
+                                    <th th:text="#{admin.daily.current}">Daily actual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="song : ${songs}" th:with="status=${songAudioStatus[song.id]}">
+                                    <td th:text="${song.id + ' - ' + song.title + ' (' + song.artist + ')'}">1 - Song</td>
+                                    <td>
+                                        <span th:if="${status != null}" th:text="${status.uploadedLayers + '/' + status.totalLayers}">0/0</span>
+                                        <span th:unless="${status != null}">0/0</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${status != null and status.totalLayers == 0}" class="badge text-bg-secondary" th:text="#{admin.daily.noLayers}">Sin capas</span>
+                                        <span th:if="${status != null and status.totalLayers > 0 and status.complete}" class="badge text-bg-success" th:text="#{admin.daily.complete}">Completa</span>
+                                        <span th:if="${status != null and status.totalLayers > 0 and !status.complete}" class="badge text-bg-warning text-dark" th:text="#{admin.daily.incomplete}">Incompleta</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${status != null and status.complete}" class="badge text-bg-success" th:text="#{admin.daily.yes}">Si</span>
+                                        <span th:unless="${status != null and status.complete}" class="badge text-bg-danger" th:text="#{admin.daily.no}">No</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${todayDailySongId != null and todayDailySongId == song.id}" class="badge text-bg-info" th:text="#{admin.daily.activeToday}">Activa hoy</span>
+                                        <span th:unless="${todayDailySongId != null and todayDailySongId == song.id}" class="text-muted">-</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3" th:text="#{admin.daily.layersTitle}">Capas de canciones</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Cancion</th>
+                                    <th>Capa</th>
+                                    <th>Audio actual</th>
+                                    <th th:text="#{admin.daily.uploadedFile}">Archivo subido</th>
+                                    <th th:text="#{admin.audio.uploadReplace}">Subir/Reemplazar MP3</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <th:block th:each="song : ${songs}" th:with="layers=${layerRepo.findBySongOrderByIdxAsc(song)},status=${songAudioStatus[song.id]}">
+                                    <tr th:each="layer : ${layers}">
+                                        <td th:text="${song.id + ' - ' + song.title}">1 - Song</td>
+                                        <td th:text="${layer.id + ' | idx ' + layer.idx + ' | ' + layer.label}">101 | idx 0 | DRUMS</td>
+                                        <td><code th:text="${layer.audioUrl}">/music/song1/01_drums.mp3</code></td>
+                                        <td>
+                                            <span th:if="${status != null and status.complete}" class="badge text-bg-success" th:text="#{admin.daily.fileOk}">OK</span>
+                                            <span th:unless="${status != null and status.complete}" class="badge text-bg-warning text-dark" th:text="#{admin.daily.filePending}">Pendiente</span>
+                                        </td>
+                                        <td>
+                                            <form th:action="@{'/admin/song-layer/' + ${layer.id} + '/audio'}" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+                                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                                <input type="file" name="audio" class="form-control" accept=".mp3,audio/mpeg,audio/mp3" required>
+                                                <button type="submit" class="btn btn-primary">Guardar</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                </th:block>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <th:block th:replace="~{fragments/footer.html :: footer}" />
+</body>
+</html>

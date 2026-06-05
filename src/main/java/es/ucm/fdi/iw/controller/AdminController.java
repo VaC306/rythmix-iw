@@ -1,6 +1,9 @@
 package es.ucm.fdi.iw.controller;
 
 import es.ucm.fdi.iw.LocalData;
+import es.ucm.fdi.iw.model.ContinueGame;
+import es.ucm.fdi.iw.model.GarticGame;
+import es.ucm.fdi.iw.model.MIDIGame;
 import es.ucm.fdi.iw.model.Song;
 import es.ucm.fdi.iw.model.SongLayer;
 import es.ucm.fdi.iw.model.DailyGame;
@@ -10,10 +13,12 @@ import es.ucm.fdi.iw.repository.SongReportRepository;
 import es.ucm.fdi.iw.repository.SongRepository;
 import es.ucm.fdi.iw.repository.AuditWebRepository;
 import es.ucm.fdi.iw.repository.DailyGameRepository;
+import es.ucm.fdi.iw.repository.MIDIGameRepository;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -31,6 +36,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -81,6 +87,9 @@ public class AdminController {
   @Autowired
   private DailyGameRepository dailyGameRepository;
 
+  @Autowired
+  private MIDIGameRepository midiGameRepository;
+
    @Autowired
   private SongReportRepository songReportRepository;
 
@@ -120,28 +129,94 @@ public class AdminController {
     this.audioAvailabilityService = audioAvailabilityService;
   }
 
-  @GetMapping("/")
-  public String index(
+  @GetMapping({"", "/"})
+  public String index() {
+    return "redirect:/admin/users";
+  }
+
+  @GetMapping("/users")
+  public String users(
       @RequestParam(required = false) String audioOk,
       @RequestParam(required = false) String audioErr,
       @RequestParam(required = false) String dailyOk,
       @RequestParam(required = false) String dailyErr,
       Model model) {
-    log.info("Admin acaba de entrar");
+    log.info("Admin entra en la vista de usuarios");
+    model.addAttribute("adminSection", "users");
     model.addAttribute("users",
-        entityManager.createQuery("select u from User u").getResultList());
+        entityManager.createQuery("select u from User u order by u.id", User.class).getResultList());
+    model.addAttribute("audioOk", audioOk);
+    model.addAttribute("audioErr", audioErr);
+    model.addAttribute("dailyOk", dailyOk);
+    model.addAttribute("dailyErr", dailyErr);
+    return "admin-users";
+  }
+
+  @GetMapping("/games")
+  public String games(@RequestParam(defaultValue = "15") int limit, Model model) {
+    int safeLimit = Math.max(1, Math.min(limit, 50));
+    List<AdminGameRow> recentGames = buildRecentGames(safeLimit);
+    model.addAttribute("adminSection", "games");
+    model.addAttribute("games", recentGames);
+    model.addAttribute("gamesLimit", safeLimit);
+    return "admin-games";
+  }
+
+  @GetMapping("/daily")
+  public String daily(
+      @RequestParam(required = false) String audioOk,
+      @RequestParam(required = false) String audioErr,
+      @RequestParam(required = false) String dailyOk,
+      @RequestParam(required = false) String dailyErr,
+      Model model) {
+    log.info("Admin entra en la vista de configuracion del daily");
+    model.addAttribute("adminSection", "daily");
     List<Song> songs = songRepository.findAll();
     Map<Long, SongAudioStatus> songAudioStatus = buildSongAudioStatus(songs);
     model.addAttribute("songAudioStatus", songAudioStatus);
-    dailyGameRepository.findByGameDay(LocalDate.now())
-        .ifPresent(dg -> model.addAttribute("todayDailySongId", dg.getSong().getId()));
+    DailyGame todayDaily = dailyGameRepository.findByGameDay(LocalDate.now()).orElse(null);
+    model.addAttribute("todayDaily", todayDaily);
+    if (todayDaily != null) {
+      model.addAttribute("todayDailySongId", todayDaily.getSong().getId());
+    }
     model.addAttribute("songs", songs);
     model.addAttribute("layerRepo", songLayerRepository);
     model.addAttribute("audioOk", audioOk);
     model.addAttribute("audioErr", audioErr);
     model.addAttribute("dailyOk", dailyOk);
     model.addAttribute("dailyErr", dailyErr);
-    return "admin";
+    return "admin-daily";
+  }
+
+  @PostMapping("/daily/update")
+  @Transactional
+  public String updateDailyConfig(@RequestParam long songId,
+      @RequestParam int maxTries,
+      @RequestParam int maxLayers) {
+    LocalDate today = LocalDate.now();
+    Song selectedSong = songRepository.findById(songId).orElse(null);
+    if (selectedSong == null) {
+      return "redirect:/admin/daily?dailyErr=admin.daily.err.songNotFound";
+    }
+    if (!audioAvailabilityService.songHasAllLayersAvailable(selectedSong)) {
+      return "redirect:/admin/daily?dailyErr=admin.daily.err.songIncomplete";
+    }
+
+    DailyGame daily = dailyGameRepository.findByGameDay(today).orElseGet(() -> {
+      DailyGame dg = new DailyGame();
+      dg.setGameDay(today);
+      return dg;
+    });
+
+    daily.setSong(selectedSong);
+    daily.setMaxTries(Math.max(1, Math.min(maxTries, 10)));
+    daily.setMaxLayers(Math.max(1, Math.min(maxLayers, 8)));
+    daily.setActive(true);
+    dailyGameRepository.save(daily);
+
+    log.info("Daily configurado manualmente para {} con songId={}, maxTries={}, maxLayers={}",
+        today, selectedSong.getId(), daily.getMaxTries(), daily.getMaxLayers());
+    return "redirect:/admin/daily?dailyOk=admin.daily.ok.updated";
   }
 
   @PostMapping("/daily/reshuffle")
@@ -150,14 +225,14 @@ public class AdminController {
     LocalDate today = LocalDate.now();
     DailyGame daily = dailyGameRepository.findByGameDay(today).orElse(null);
     if (daily == null) {
-      return "redirect:/admin/?dailyErr=admin.daily.err.notCreated";
+      return "redirect:/admin/daily?dailyErr=admin.daily.err.notCreated";
     }
 
     List<Song> availableSongs = songRepository.findAll().stream()
         .filter(audioAvailabilityService::songHasAllLayersAvailable)
         .toList();
     if (availableSongs.isEmpty()) {
-      return "redirect:/admin/?dailyErr=admin.daily.err.noCompleteSongs";
+      return "redirect:/admin/daily?dailyErr=admin.daily.err.noCompleteSongs";
     }
 
     Song currentSong = daily.getSong();
@@ -168,14 +243,14 @@ public class AdminController {
     Song chosen;
     if (alternatives.isEmpty()) {
       chosen = currentSong;
-      return "redirect:/admin/?dailyOk=admin.daily.ok.onlyOneComplete";
+      return "redirect:/admin/daily?dailyOk=admin.daily.ok.onlyOneComplete";
     }
 
     chosen = alternatives.get(ThreadLocalRandom.current().nextInt(alternatives.size()));
     daily.setSong(chosen);
     dailyGameRepository.save(daily);
     log.info("Daily de {} cambiado manualmente de songId={} a songId={}", today, currentSong.getId(), chosen.getId());
-    return "redirect:/admin/?dailyOk=admin.daily.ok.reshuffled";
+    return "redirect:/admin/daily?dailyOk=admin.daily.ok.reshuffled";
   }
 
   @PostMapping("/song-layer/{id}/audio")
@@ -184,19 +259,19 @@ public class AdminController {
     SongLayer layer = songLayerRepository.findById(id).orElse(null);
     if (layer == null) {
       log.warn("Subida rechazada: capa {} no encontrada", id);
-      return "redirect:/admin/?audioErr=admin.audio.err.layerNotFound";
+      return "redirect:/admin/daily?audioErr=admin.audio.err.layerNotFound";
     }
 
     if (audioFile == null || audioFile.isEmpty()) {
       log.warn("Subida rechazada para capa {}: fichero vacío", id);
-      return "redirect:/admin/?audioErr=admin.audio.err.emptyFile";
+      return "redirect:/admin/daily?audioErr=admin.audio.err.emptyFile";
     }
 
     String originalName = audioFile.getOriginalFilename();
     String safeName = originalName == null ? "" : originalName.trim().toLowerCase();
     if (!safeName.endsWith(".mp3")) {
       log.warn("Subida rechazada para capa {}: extensión inválida ({})", id, originalName);
-      return "redirect:/admin/?audioErr=admin.audio.err.onlyMp3";
+      return "redirect:/admin/daily?audioErr=admin.audio.err.onlyMp3";
     }
 
     String contentType = audioFile.getContentType();
@@ -204,7 +279,7 @@ public class AdminController {
         !"audio/mpeg".equalsIgnoreCase(contentType) &&
         !"audio/mp3".equalsIgnoreCase(contentType)) {
       log.warn("Subida rechazada para capa {}: contentType inválido ({})", id, contentType);
-      return "redirect:/admin/?audioErr=admin.audio.err.invalidMime";
+      return "redirect:/admin/daily?audioErr=admin.audio.err.invalidMime";
     }
 
     File out = localData.getFile(musicDir, id + ".mp3");
@@ -215,7 +290,7 @@ public class AdminController {
       stream.write(audioFile.getBytes());} 
     catch (Exception e) {
       log.error("Error al escribir el audio para capa {}", id, e);
-      return "redirect:/admin/?audioErr=admin.audio.err.saveFailed";
+      return "redirect:/admin/daily?audioErr=admin.audio.err.saveFailed";
     }
     
     try {
@@ -224,7 +299,7 @@ public class AdminController {
         ProcessingResult pr = processWithFfmpeg(tmpIn, tmpOut);
         if (!pr.ok()) {
           log.warn("Subida rechazada para capa {}: {}", id, pr.message());
-          return "redirect:/admin/?audioErr=" + pr.message();
+          return "redirect:/admin/daily?audioErr=" + pr.message();
         }
         Files.move(tmpOut.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
       } else {
@@ -234,10 +309,10 @@ public class AdminController {
       layer.setAudioUrl("/song-layer/" + id + "/audio");
       songLayerRepository.save(layer);
       log.info("Audio subido para capa {} en {}", id, out.getAbsolutePath());
-      return "redirect:/admin/?audioOk=admin.audio.ok.updated";
+      return "redirect:/admin/daily?audioOk=admin.audio.ok.updated";
     } catch (IOException e) {
       log.error("Error IO al subir audio para capa {}", id, e);
-      return "redirect:/admin/?audioErr=admin.audio.err.saveFailed";
+      return "redirect:/admin/daily?audioErr=admin.audio.err.saveFailed";
     } finally {
       if (tmpIn.exists() && !tmpIn.delete()) {
         log.warn("No se pudo borrar temporal {}", tmpIn.getAbsolutePath());
@@ -357,6 +432,52 @@ public class AdminController {
   }
 
   private record SongAudioStatus(int totalLayers, int uploadedLayers, boolean complete) {
+  }
+
+  private List<AdminGameRow> buildRecentGames(int limit) {
+    List<MIDIGame> recentGames = midiGameRepository.findByFinishedTrueOrderByDateEndedDesc(PageRequest.of(0, limit));
+    List<AdminGameRow> rows = new ArrayList<>();
+    for (MIDIGame game : recentGames) {
+      String type = gameTypeLabel(game);
+      String owner = game.getOwner() != null ? game.getOwner().getUsername() : "-";
+      List<String> players = game.getPlayers().stream().map(User::getUsername).toList();
+      int sequenceCount = game.getSequences() == null ? 0 : game.getSequences().size();
+      rows.add(new AdminGameRow(
+          game.getId(),
+          game.getLobbyCode(),
+          type,
+          owner,
+          players,
+          game.getDateEnded(),
+          game.isPublic(),
+          sequenceCount,
+          game.isStarted(),
+          game.isFinished()));
+    }
+    return rows;
+  }
+
+  private String gameTypeLabel(MIDIGame game) {
+    if (game instanceof ContinueGame) {
+      return "Continuacion de Cancion";
+    }
+    if (game instanceof GarticGame) {
+      return "Cancion Sorpresa";
+    }
+    return "Partida";
+  }
+
+  private record AdminGameRow(
+      long id,
+      String lobbyCode,
+      String type,
+      String owner,
+      List<String> players,
+      java.time.LocalDateTime endedAt,
+      boolean publicGame,
+      int sequenceCount,
+      boolean started,
+      boolean finished) {
   }
 
   @PostMapping("/toggle/{id}")
