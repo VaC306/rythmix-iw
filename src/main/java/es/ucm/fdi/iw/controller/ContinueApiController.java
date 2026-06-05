@@ -215,6 +215,7 @@ public class ContinueApiController {
                 newTrack.setSequence(finalTrack);
                 newTrack.setInstrument(track.getInstrument());
                 newTrack.setNotes(track.getNotes());
+                newTrack.setAuthor(track.getAuthor());
                 finalTrack.getTracks().add(newTrack);
             }
 
@@ -229,6 +230,7 @@ public class ContinueApiController {
                     newTrack.setSequence(playerSequence);
                     newTrack.setInstrument(track.getInstrument());
                     newTrack.setNotes(track.getNotes());
+                    newTrack.setAuthor(track.getAuthor());
                     playerSequence.getTracks().add(newTrack);
                 }
             }
@@ -307,7 +309,9 @@ public class ContinueApiController {
                     .get(u.getId());
             MIDISequence sequence = midiSequenceRepository.findById(sequenceId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sequence not found"));
-            sequence.getTracks().add(new MIDITrack(submission, sequence));
+            MIDITrack track = new MIDITrack(submission, sequence);
+            track.setAuthor(u.getUsername());
+            sequence.getTracks().add(track);
             game.getTrackSubmissions().put(u.getId(), true);
             midiSequenceRepository.save(sequence);
             midiGameRepository.save(game);

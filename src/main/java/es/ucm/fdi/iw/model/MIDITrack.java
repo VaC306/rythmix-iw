@@ -25,6 +25,8 @@ public class MIDITrack implements Transferable<MIDITrack.Transfer> {
 
     private int instrument;
 
+    private String author;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "varchar")
     private List<Note> notes;
@@ -51,11 +53,12 @@ public class MIDITrack implements Transferable<MIDITrack.Transfer> {
         private int instrument;
         private long sequenceId;
         private List<Note> notes;
+        private String author;
     }
 
     @Override
     public Transfer toTransfer() {
-        return new Transfer(this.id, this.instrument, this.sequence.getId(), this.notes);
+        return new Transfer(this.id, this.instrument, this.sequence.getId(), this.notes, this.author);
     }
 
 }

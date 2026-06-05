@@ -63,12 +63,17 @@ La estructura del proyecto está pensada para facilitar la ampliación futura co
 
 | Ruta | Estado |
 |------|--------|
-| `/` (Índice) | Falta estilizar la página |
-| `/guess` (Adivina la canción) | Lógica implementada, falta estilo |
-| `/games` (Elegir juego) | Falta estilizar |
-| `/gartic` (Canción sorpresa) | Lógica implementada desde la vista de un jugador, falta implementar WebSockets y añadir estilo |
-| `/continue` | En desarrollo, por ahora inaccesible |
-
+| `/` (Índice) | Página de bienvenida con redirección a los juegos |
+| `/guess` (Adivina la canción) | Juego basado en adivinar mediante una serie de intentos el juego diario |
+| `/games` (Elegir juego) | Pagina donde se elije los tipos de juegos en multijugador |
+| `/gartic` (Canción sorpresa) | Lógica implementada desde la vista de un jugador, está implementado con websockets. Se basa en que cada ronda se crea un track distinto |
+| `/continue` | (Continua la canción) | Lógica implementada desde la vista de un jugador, está implementado con websockets y además realiza un sistema de votación para elegir el mejor track de la ronda |
+| `/favoriteSongs` | Pagina en donde se muestran las canciones marcadas como favoritas de los jeugos de gartic y continue, mostrando detalles como quien realizo el track en concreto
+| `/leaderboard` | Se muestra un ranking de los jugadores con mejor puntuación del juego diario
+| `/user/{id}`| Pagina donde se puede visualizar el perfil de cada usuario. Se muestra el nombre y apellidos, nombre de usuario, rol asociado, estado de la cuenta, una sección para cambiar contraseña, otra sección para elegir una foto de perfil, por último se muestra al final una sección del historial de canciones en donde el jugador ha participado.
+| `/admin/dashboard` | En esta vista se muestra por un lado estadisticas de la aplicación como usuarios totales, partidas públicas, partidas privadas o total de canciones. Por otro lado, se muestra una sección de observabilidad mostrando distintos eventos producidos en la aplicación para saber quién ha hecho qué y cuándo.
+| `/admin/reports` | En esta sección se muestran los reportes realizados por los usuarios cuando han observado un error en la parte del juego de canción diario
+| `/admin/` | Esta es la vista del usuario, que puede observar los usuarios de la aplicación o insertar o actualizar la canción del juego diario. 
 ---
 
 ## 🛠️ Tecnologías utilizadas
@@ -148,4 +153,4 @@ Este proyecto ha sido desarrollado como parte de la asignatura *Ingeniería Web 
 
 ## 📌 Estado del proyecto
 
-🚧 En desarrollo activo. Próximamente se completarán los estilos y la funcionalidad en tiempo real con WebSockets.
+Finalizado el proyecto Rythmix de la asignatura de Ingeniera Web.

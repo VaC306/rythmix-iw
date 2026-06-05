@@ -443,6 +443,7 @@ public class AdminController {
     model.addAttribute("logs", auditWebRepository.findByFiltersDesc(userId, actionPerformed));
     model.addAttribute("users", entityManager.createQuery("select u from User u").getResultList());
     model.addAttribute("selectedUserId", userId); 
+    if (userId != null) model.addAttribute("selectedUser", entityManager.find(User.class, userId));
 
     return "dashboard";
   }

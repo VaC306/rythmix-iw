@@ -2,36 +2,58 @@ const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let songs = [];
 
 async function getFavoriteSongs() {
-    const r = await fetch("/api/favSong");
+    const favRes = await fetch("/api/favSong");
 
-    if(r.status === 401){
+    if(favRes.status === 401){
         document.getElementById('login-message').classList.remove('d-none');
         return;
     }
 
-    const midiSequences = await r.json();
-    if(midiSequences.length === 0){
+    const favorites = await favRes.json();
+    if(favorites.length === 0){
         document.getElementById('empty-songs').classList.remove('d-none');
         return;
     }
 
-    const favoriteSongsContainer = document.getElementById('favorite-songs-container');
+    //const favoriteSongsContainer = document.getElementById('favorite-songs-container');
+    const instrumentRes = await fetch("/api/game/instrument/getall");
+    const instruments = instrumentRes.ok ? await instrumentRes.json() : [];
 
-    midiSequences.forEach( (s,i) => {
-        favoriteSongsContainer.insertAdjacentHTML('beforeend', `
-            <div class="card mb-2 shadow-sm">
+    const container = document.getElementById('favorite-songs-container');
+
+    favorites.forEach( (fav,i) => {
+        const date = fav.gameDate ? new Date(fav.gameDate).toLocaleDateString('es-ES') : '';
+        const isContinue = fav.gameType === 'Continuación de Canción';
+
+        const tracksHTML = fav.tracks.map(t => {
+            const instr = instruments.find(x => x.program === t.instrument);
+            const instrName = instr ? instr.instrumentName : `Instrumento #${t.instrument}`;
+            const authorPart = t.author ? `<em class="text-muted">${t.author}</em>` : '';
+            return `<li class="list-group-item list-group-item-flush py-1 px-0 small text-center"></span>${instrName}</span> - ${authorPart? `- ${authorPart}`: '' }</li>`;
+        }).join('');
+
+        const playersHtml = !isContinue && fav.players?.length ? `<div class="small text-muted mt-1"> Jugadores: ${fav.players.join(', ')}</div>` : '';
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="card mb-3 shadow-sm">
                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-secondary me-3">${fav.gameType}</span>
+                            <small class="text-muted">${date}</small>
+                            ${playersHtml}
+                        </div>
+                        <small class="text-muted"> Secuencia #${fav.sequenceId}</small>
+                    </div>
+                    <ul class="list-group mb-2">${tracksHTML}</ul>
                     <div class="row align-items-center">
                         <div class="col">
-                            <small class="text-muted">Secuencia #${s.id}</small>
-                        </div>
-                        <div class="col col-6">
                             <input id="favProgress${i}" type="range" class="form-range">
                         </div>
-                        <div class="col d-flex justify-content-end gap-2">
-                            <button id="favPlay${i}"  class="btn btn-primary"><i class="bi bi-play-fill"></i></button>
-                            <button id="favPause${i}" class="btn btn-primary"><i class="bi bi-pause-fill"></i></button>
-                            <button id="favStop${i}"  class="btn btn-primary"><i class="bi bi-stop-fill"></i></button>
+                        <div class="col-auto d-flex  gap-2">
+                            <button id="favPlay${i}"  class="btn btn-primary btn-sm"><i class="bi bi-play-fill"></i></button>
+                            <button id="favPause${i}" class="btn btn-primary btn-sm"><i class="bi bi-pause-fill"></i></button>
+                            <button id="favStop${i}"  class="btn btn-primary btn-sm"><i class="bi bi-stop-fill"></i></button>
                         </div>
                     </div>
                 </div>
@@ -39,13 +61,13 @@ async function getFavoriteSongs() {
         `);
 
         let pr = new PianoRoll({audioContext: audioContext});
-        pr.setFixedTracks(s.tracks)
+        pr.setFixedTracks(fav.tracks);
         pr.bindControls({
             playButton: `#favPlay${i}`,
             pauseButton: `#favPause${i}`,
             stopButton: `#favStop${i}`,
             progressBar: `#favProgress${i}`,
-        })
+        });
         songs.push(pr);
     })
 }
