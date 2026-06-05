@@ -109,6 +109,25 @@ class PianoRoll {
         });
     }
 
+    loadTrack(trackData) {
+        this.clearTrack();
+        this.setInstrument(trackData.instrument);
+        for (const n of trackData.notes) {
+            const col = Math.round(n.time * this.beatsPerMeasure);
+            this.sequence.tracks[this.editableTrackIdx].push({
+                cmd: "note",
+                duration: 1 / this.beatsPerMeasure,
+                gap: 0,
+                instrument: this.instrument,
+                pitch: parseInt(n.pitch),
+                start: n.time,
+                volume: 80,
+            });
+            const cell = document.querySelector(`#key-${n.pitch}-${col}`);
+            if (cell) cell.classList.add("active");
+        }
+    }
+
     createVisualElement(selector, keys) {
         let container = document.querySelector(selector);
         container.classList.add("h-scroll");

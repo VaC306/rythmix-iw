@@ -28,9 +28,9 @@ async function getFavoriteSongs() {
         const tracksHTML = fav.tracks.map(t => {
             const instr = instruments.find(x => x.program === t.instrument);
             const instrName = instr ? instr.instrumentName : `Instrumento #${t.instrument}`;
-            const authorPart = t.author ? `<em class="text-muted">${t.author}</em>` : '';
-            return `<li class="list-group-item list-group-item-flush py-1 px-0 small text-center"></span>${instrName}</span> - ${authorPart? `- ${authorPart}`: '' }</li>`;
-        }).join('');
+            const authorPart = t.author ? ` - <em class="text-muted">${t.author}</em>` : '';
+            return `<span class="badge bg-secondary me-1">${instrName}</span>${authorPart}`;
+        }).join(' ');
 
         const playersHtml = !isContinue && fav.players?.length ? `<div class="small text-muted mt-1"> Jugadores: ${fav.players.join(', ')}</div>` : '';
 
@@ -45,7 +45,7 @@ async function getFavoriteSongs() {
                         </div>
                         <small class="text-muted"> Secuencia #${fav.sequenceId}</small>
                     </div>
-                    <ul class="list-group mb-2">${tracksHTML}</ul>
+                    <div class="mb-2">${tracksHTML}</div>
                     <div class="row align-items-center">
                         <div class="col">
                             <input id="favProgress${i}" type="range" class="form-range">

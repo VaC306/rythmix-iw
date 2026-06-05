@@ -17,6 +17,7 @@ import org.springframework.ui.Model;
 import org.springframework.util.ResourceUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,12 +36,15 @@ import es.ucm.fdi.iw.model.MIDIInstrument;
 import es.ucm.fdi.iw.model.MIDISequence;
 import es.ucm.fdi.iw.model.MIDITrack;
 import es.ucm.fdi.iw.model.Message;
+import es.ucm.fdi.iw.model.SavedSequence;
+import es.ucm.fdi.iw.model.TrackData;
 import es.ucm.fdi.iw.model.User;
 import es.ucm.fdi.iw.model.User.Role;
 import es.ucm.fdi.iw.repository.FavoritesSongsRepository;
 import es.ucm.fdi.iw.repository.MIDIGameRepository;
 import es.ucm.fdi.iw.repository.MIDIInstrumentRepository;
 import es.ucm.fdi.iw.repository.MIDISequenceRepository;
+import es.ucm.fdi.iw.repository.SavedSequenceRepository;
 import io.karatelabs.js.Context;
 import io.karatelabs.js.Interpreter;
 import io.karatelabs.js.Node;
@@ -72,12 +76,14 @@ public class ApiController {
   private final MIDIGameRepository midiGameRepository;
   private final MIDIInstrumentRepository midiInstrumentRepository;
   private final FavoritesSongsRepository favoritesSongsRepository;
+  private final SavedSequenceRepository savedSequenceRepository;
 
-  public ApiController(MIDISequenceRepository midiSequenceRepository, MIDIGameRepository midiGameRepository, MIDIInstrumentRepository midiInstrumentRepository, FavoritesSongsRepository favoritesSongsRepository) {
+  public ApiController(MIDISequenceRepository midiSequenceRepository, MIDIGameRepository midiGameRepository, MIDIInstrumentRepository midiInstrumentRepository, FavoritesSongsRepository favoritesSongsRepository, SavedSequenceRepository savedSequenceRepository) {
     this.midiSequenceRepository = midiSequenceRepository;
     this.midiGameRepository = midiGameRepository;
     this.midiInstrumentRepository = midiInstrumentRepository;
     this.favoritesSongsRepository = favoritesSongsRepository;
+    this.savedSequenceRepository = savedSequenceRepository;
   }
 
   private static final Logger log = LogManager.getLogger(ApiController.class);
@@ -300,6 +306,71 @@ public class ApiController {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
       List<FavoriteSong.Transfer> resuListFavSongs = favoritesSongsRepository.findByUser(u).stream().map(FavoriteSong::toTransfer).toList();
       return resuListFavSongs;
+  }
+
+  @PostMapping("/sequence/save")
+  @Transactional
+  public Map<String, Object> saveSequence(@RequestBody Map<String, Object> body, HttpSession session) {
+      User u = (User) session.getAttribute("u");
+      if (u == null)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
+
+      String name = (String) body.get("name");
+      if (name == null || name.isBlank())
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
+
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> tracksRaw = (List<Map<String, Object>>) body.get("tracks");
+      if (tracksRaw == null || tracksRaw.isEmpty())
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one track is required");
+
+      ObjectMapper mapper = new ObjectMapper();
+      List<TrackData> tracks = tracksRaw.stream().map(t -> mapper.convertValue(t, TrackData.class)).toList();
+
+      SavedSequence saved = new SavedSequence();
+      saved.setUser(u);
+      saved.setName(name);
+      saved.setCreatedAt(LocalDateTime.now());
+      saved.setTracks(tracks);
+      savedSequenceRepository.save(saved);
+
+      return Map.of("result", "saved", "id", saved.getId());
+  }
+
+  @GetMapping("/sequence/saved")
+  @Transactional
+  public List<SavedSequence.Transfer> getSavedSequences(HttpSession session) {
+      User u = (User) session.getAttribute("u");
+      if (u == null)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
+      return savedSequenceRepository.findByUserOrderByCreatedAtDesc(u).stream()
+          .map(SavedSequence::toTransfer).toList();
+  }
+
+  @GetMapping("/sequence/saved/{id}")
+  public SavedSequence.Transfer getSavedSequence(@PathVariable long id, HttpSession session) {
+      User u = (User) session.getAttribute("u");
+      if (u == null)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
+      SavedSequence saved = savedSequenceRepository.findById(id)
+          .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Saved sequence not found"));
+      if (saved.getUser().getId() != u.getId())
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your sequence");
+      return saved.toTransfer();
+  }
+
+  @DeleteMapping("/sequence/saved/{id}")
+  @Transactional
+  public Map<String, String> deleteSavedSequence(@PathVariable long id, HttpSession session) {
+      User u = (User) session.getAttribute("u");
+      if (u == null)
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not logged in");
+      SavedSequence saved = savedSequenceRepository.findById(id)
+          .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Saved sequence not found"));
+      if (saved.getUser().getId() != u.getId())
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your sequence");
+      savedSequenceRepository.delete(saved);
+      return Map.of("result", "deleted");
   }
   
 }

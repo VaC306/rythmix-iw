@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html class="h-100" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8" />
+    <th:block th:replace="~{fragments/head :: header}" />
+    <title th:text="#{mySequences.pageTitle}"></title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
+</head>
+
+<body class="d-flex flex-column h-100">
+    <header th:replace="~{fragments/nav.html :: nav}"></header>
+
+    <main class="flex-shrink-0">
+        <div class="container my-5">
+            <h1 class="text-center mb-4" th:text="#{mySequences.title}"></h1>
+
+            <div id="login-message" class="alert alert-warning d-none">
+                Debes iniciar sesión para ver tus secuencias guardadas.
+            </div>
+
+            <div id="empty-sequences" class="text-center text-muted d-none">
+                No tienes secuencias guardadas todavia. Juega partidas y guarda tus secuencias!
+            </div>
+
+            <div id="saved-sequences-container"></div>
+        </div>
+    </main>
+
+    <th:block th:replace="~{fragments/footer.html :: footer}" />
+
+<script th:src="@{/js/components/piano-roll.js}" defer></script>
+<script th:src="@{/js/abcjs-basic-min.js}" defer></script>
+<script th:src="@{/js/components/my-sequences.js}" defer></script>
+</body>
+</html>

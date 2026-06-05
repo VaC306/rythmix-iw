@@ -181,6 +181,12 @@ public class RootController {
         return "favoriteSongs";
     }
 
+    @GetMapping("/mySequences")
+    public String mySequences(HttpSession session, Model model) {
+        model.addAttribute("u", session.getAttribute("u"));
+        return "mySequences";
+    }
+
     @GetMapping("/lobby/{mode}")
     public String lobby(@PathVariable String mode, Model model) {
         String view = "lobby";

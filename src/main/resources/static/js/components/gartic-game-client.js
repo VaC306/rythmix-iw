@@ -176,6 +176,175 @@ async function setupPianoRoll(selectors) {
     .addEventListener("click", async (e) => {
       sendTrack();
     });
+  setupSaveLoadButtons(selectors);
+}
+
+function setupSaveLoadButtons(selectors) {
+  const saveBtn = document.querySelector("#saveSequenceBtn");
+  const loadBtn = document.querySelector("#loadSequenceBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      openSaveModal(
+        () => pianoRoll.getEditableTrack(),
+      );
+    });
+  }
+  if (loadBtn) {
+    const currentInstrument = gameData.roundData.instrumentData.program;
+    const currentInstrumentName = gameData.roundData.instrumentData.instrumentName;
+    loadBtn.addEventListener("click", () => {
+      openLoadModal(
+        (trackData) => pianoRoll.loadTrack(trackData),
+        currentInstrument,
+        currentInstrumentName,
+      );
+    });
+  }
+}
+
+function openSaveModal(getTrackFn) {
+  const modal = document.querySelector("#save-sequence-modal");
+  const nameInput = document.querySelector("#save-sequence-name");
+  const errorDiv = document.querySelector("#save-sequence-error");
+  const confirmBtn = document.querySelector("#save-sequence-confirm");
+  if (!modal) return;
+
+  nameInput.value = "";
+  errorDiv.classList.add("d-none");
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+
+  function handleSave() {
+    const name = nameInput.value.trim();
+    if (!name) {
+      errorDiv.textContent = "Debes dar un nombre a la secuencia";
+      errorDiv.classList.remove("d-none");
+      return;
+    }
+    confirmBtn.disabled = true;
+    const track = getTrackFn();
+    fetch("/api/sequence/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "X-CSRF-TOKEN": config.csrf.value,
+      },
+      body: JSON.stringify({ name, tracks: [track] }),
+    }).then((r) => {
+      if (r.ok) {
+        bsModal.hide();
+      } else {
+        errorDiv.textContent = "Error al guardar la secuencia";
+        errorDiv.classList.remove("d-none");
+      }
+    }).finally(() => {
+      confirmBtn.disabled = false;
+    });
+  }
+
+  confirmBtn.onclick = handleSave;
+  nameInput.onkeydown = (e) => { if (e.key === "Enter") handleSave(); };
+}
+
+function openLoadModal(loadTrackFn, currentInstrument, currentInstrumentName) {
+  const modal = document.querySelector("#load-sequence-modal");
+  const listDiv = document.querySelector("#load-sequence-list");
+  const emptyDiv = document.querySelector("#load-sequence-empty");
+  const emptyFilteredDiv = document.querySelector("#load-sequence-empty-filtered");
+  const loginWarning = document.querySelector("#load-sequence-login-warning");
+  const instrumentInfo = document.querySelector("#load-sequence-instrument-info");
+  if (!modal) return;
+
+  listDiv.innerHTML = "";
+  emptyDiv.classList.add("d-none");
+  emptyFilteredDiv.classList.add("d-none");
+  loginWarning.classList.add("d-none");
+  instrumentInfo.classList.add("d-none");
+
+  fetch("/api/sequence/saved").then((r) => {
+    if (r.status === 401) {
+      loginWarning.classList.remove("d-none");
+      return [];
+    }
+    return r.json();
+  }).then((sequences) => {
+    if (!sequences || sequences.length === 0) {
+      emptyDiv.classList.remove("d-none");
+      return;
+    }
+
+    const matching = sequences.filter(
+      (seq) => seq.tracks && seq.tracks.length > 0 && seq.tracks[0].instrument === currentInstrument,
+    );
+
+    if (matching.length === 0) {
+      emptyFilteredDiv.textContent = `No tienes secuencias guardadas con el instrumento actual (${currentInstrumentName}). Solo puedes cargar secuencias del mismo instrumento.`;
+      emptyFilteredDiv.classList.remove("d-none");
+      return;
+    }
+
+    instrumentInfo.textContent = `Mostrando solo secuencias para el instrumento: ${currentInstrumentName}`;
+    instrumentInfo.classList.remove("d-none");
+
+    matching.forEach((seq, i) => {
+      const dateStr = seq.createdAt ? new Date(seq.createdAt).toLocaleDateString("es-ES") : "";
+      const trackCount = seq.tracks ? seq.tracks.length : 0;
+      const card = document.createElement("div");
+      card.className = "card mb-3";
+      const instrHtml = seq.tracks ? seq.tracks.map((t) => {
+        const name = getInstrumentName(t.instrument);
+        return `<span class="badge bg-secondary me-1">${name}</span>`;
+      }).join("") : "";
+      card.innerHTML = `
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <strong>${seq.name}</strong>
+              <small class="text-muted ms-2">${dateStr}</small>
+            </div>
+            <div>
+              <small class="text-muted me-3">${trackCount} pista(s)</small>
+              ${instrHtml}
+            </div>
+          </div>
+          <div class="row align-items-center">
+            <div class="col">
+              <input id="loadProgress${i}" type="range" class="form-range">
+            </div>
+            <div class="col-auto d-flex gap-2">
+              <button id="loadPlay${i}" class="btn btn-primary btn-sm"><i class="bi bi-play-fill"></i></button>
+              <button id="loadPause${i}" class="btn btn-primary btn-sm"><i class="bi bi-pause-fill"></i></button>
+              <button id="loadStop${i}" class="btn btn-primary btn-sm"><i class="bi bi-stop-fill"></i></button>
+              <button id="loadSelect${i}" class="btn btn-success btn-sm">Cargar</button>
+            </div>
+          </div>
+        </div>
+      `;
+      listDiv.appendChild(card);
+
+      if (seq.tracks && seq.tracks.length > 0) {
+        let pr = new PianoRoll({});
+        pr.setFixedTracks(seq.tracks);
+        pr.bindControls({
+          playButton: `#loadPlay${i}`,
+          pauseButton: `#loadPause${i}`,
+          stopButton: `#loadStop${i}`,
+          progressBar: `#loadProgress${i}`,
+        });
+      }
+
+      document.querySelector(`#loadSelect${i}`).addEventListener("click", () => {
+        if (seq.tracks && seq.tracks.length > 0) {
+          loadTrackFn(seq.tracks[0]);
+        }
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) bsModal.hide();
+      });
+    });
+  });
+
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
 }
 
 async function showInstructionsModal(selectors) {
@@ -285,28 +454,44 @@ async function setupGameScreen() {
   }
 }
 
+function getInstrumentName(program) {
+  const instrument = availableInstruments?.find((ins) => ins.program === program);
+  return instrument ? instrument.instrumentName : `Instrumento #${program}`;
+}
+
+function tracksToHtml(tracks) {
+  if (!tracks || tracks.length === 0) return "";
+  return tracks.map((t) => {
+    const name = getInstrumentName(t.instrument);
+    return `<span class="badge bg-secondary me-1">${name}</span>`;
+  }).join("");
+}
+
 function createCardHTML(params) {
   const html = `
     <div class="card mb-3">
-      <div class="card-body d-flex align-items-center py-5 px-5">
-        <div class="flex-grow-1">
-          <input id="${params.progressBarId}" type="range" class="form-range">
-        </div>
-        <div class="ms-5">
-          <div class="btn-group" role="group">
-            <button id="${params.playButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.play}">
-              <i class="bi bi-play-fill"></i>
-            </button>
-            <button id="${params.pauseButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.pause}">
-              <i class="bi bi-pause-fill"></i>
-            </button>
-            <button id="${params.stopButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.stop}">
-              <i class="bi bi-stop-fill"></i>
-            </button>
-            <button id="${params.saveButtonId}" type="button" class="btn btn-outline-success"
-              onclick="saveFavoriteSong(${params.midiSequenceId}, this)">
-              <i class="bi bi-heart"></i>
-            </button>
+      <div class="card-body">
+        ${params.tracksHtml ? `<div class="mb-2 small text-muted">${params.tracksHtml}</div>` : ""}
+        <div class="d-flex align-items-center py-3 px-2">
+          <div class="flex-grow-1">
+            <input id="${params.progressBarId}" type="range" class="form-range">
+          </div>
+          <div class="ms-5">
+            <div class="btn-group" role="group">
+              <button id="${params.playButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.play}">
+                <i class="bi bi-play-fill"></i>
+              </button>
+              <button id="${params.pauseButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.pause}">
+                <i class="bi bi-pause-fill"></i>
+              </button>
+              <button id="${params.stopButtonId}" type="button" class="btn btn-primary" th:title="#{topSongs.stop}">
+                <i class="bi bi-stop-fill"></i>
+              </button>
+              <button id="${params.saveButtonId}" type="button" class="btn btn-outline-success"
+                onclick="saveFavoriteSong(${params.midiSequenceId}, this)">
+                <i class="bi bi-heart"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -328,6 +513,7 @@ function setupCards(sequences) {
           stopButtonId: `stopButtonEnd${i}`,
           saveButtonId: `saveButtonEnd${i}`,
           midiSequenceId: sequences[i].id,
+          tracksHtml: tracksToHtml(sequences[i].tracks),
         }),
       );
     let pr = new PianoRoll({});
