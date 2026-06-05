@@ -101,6 +101,41 @@ class PianoRoll {
         this.synth.stop();
     }
 
+    static createMiniReadOnly(container, keys, tracks, beatsPerMeasure) {
+        beatsPerMeasure = beatsPerMeasure || 8;
+        const nCols = 4 * beatsPerMeasure;
+        const active = new Set();
+        for (const t of tracks) {
+            for (const n of t.notes) {
+                active.add(`${n.pitch}-${Math.round(n.time * beatsPerMeasure)}`);
+            }
+        }
+        const shownKeys = [];
+        for (const k of keys) {
+            let hasNote = false;
+            for (let col = 0; col < nCols; col++) {
+                if (active.has(`${k.pitch}-${col}`)) { hasNote = true; break; }
+            }
+            if (hasNote || k.showLabel) shownKeys.push(k);
+        }
+        if (shownKeys.length === 0) {
+            shownKeys.push(...keys.slice(0, Math.min(keys.length, 14)));
+        }
+        container.classList.add("mini-roll");
+        for (const k of shownKeys) {
+            const row = document.createElement("div");
+            row.classList.add("key-row");
+            for (let col = 0; col < nCols; col++) {
+                const cell = document.createElement("div");
+                cell.classList.add("note", k.isBlack ? "black-key" : "white-key");
+                if (active.has(`${k.pitch}-${col}`)) cell.classList.add("active");
+                if (col % beatsPerMeasure === beatsPerMeasure - 1) cell.classList.add("measure-end");
+                row.appendChild(cell);
+            }
+            container.appendChild(row);
+        }
+    }
+
     clearTrack() {
         this.stop();
         this.sequence.tracks[this.editableTrackIdx] = [];

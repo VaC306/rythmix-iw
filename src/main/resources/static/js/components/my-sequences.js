@@ -17,6 +17,24 @@ async function getSavedSequences() {
     const instrumentRes = await fetch("/api/game/instrument/getall");
     const instruments = instrumentRes.ok ? await instrumentRes.json() : [];
 
+    const neededPrograms = new Set();
+    for (const seq of sequences) {
+        if (seq.tracks) {
+            for (const t of seq.tracks) {
+                neededPrograms.add(t.instrument);
+            }
+        }
+    }
+
+    const keyCache = {};
+    for (const prog of neededPrograms) {
+        const ir = await fetch(`/api/game/instrument/get/${prog}`);
+        if (ir.ok) {
+            const data = await ir.json();
+            keyCache[prog] = data.notes;
+        }
+    }
+
     function instrName(program) {
         const inst = instruments.find(x => x.program === program);
         return inst ? inst.instrumentName : `Instrumento #${program}`;
@@ -51,6 +69,7 @@ async function getSavedSequences() {
                         </button>
                     </div>
                 </div>
+                <div id="miniRollContainer${i}" class="mb-2"></div>
                 <div class="row align-items-center">
                     <div class="col">
                         <input id="seqProgress${i}" type="range" class="form-range">
@@ -64,6 +83,20 @@ async function getSavedSequences() {
             </div>
         `;
         container.appendChild(card);
+
+        const miniContainer = document.getElementById(`miniRollContainer${i}`);
+        const instrPrograms = new Set();
+        if (seq.tracks) for (const t of seq.tracks) instrPrograms.add(t.instrument);
+        for (const prog of instrPrograms) {
+            const keys = keyCache[prog];
+            if (!keys) continue;
+            const progTracks = seq.tracks.filter(t => t.instrument === prog);
+            const label = document.createElement("div");
+            label.className = "mini-roll-label";
+            label.textContent = instrName(prog);
+            miniContainer.appendChild(label);
+            PianoRoll.createMiniReadOnly(miniContainer, keys, progTracks);
+        }
 
         if (seq.tracks && seq.tracks.length > 0) {
             let pr = new PianoRoll({ audioContext: audioContext });
