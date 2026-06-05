@@ -59,7 +59,7 @@ public class SecurityConfig {
 				.ignoringRequestMatchers("/api/**")
 			)
       .authorizeHttpRequests(authorize -> authorize
-				.requestMatchers(
+				.				requestMatchers(
 					"/css/**", 
 					"/js/**", 
 					"/img/**", 
@@ -76,6 +76,7 @@ public class SecurityConfig {
 					"/leaderboard", 
 					"/guess/**", 
 					"/favoriteSongs",
+					"/mySequences",
 					"/gartic/**",
 					"/api/game/**"
 					).permitAll()
